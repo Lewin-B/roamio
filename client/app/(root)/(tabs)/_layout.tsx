@@ -56,14 +56,14 @@ export default function Layout() {
           title: "Home",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.home} focused={focused} />
+            <TabIcon source={icons.pin} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="rides"
+        name="feed"
         options={{
-          title: "Rides",
+          title: "Feed",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon source={icons.list} focused={focused} />
@@ -71,12 +71,12 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="itineraries"
         options={{
-          title: "Chat",
+          title: "Itineraries",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.chat} focused={focused} />
+            <TabIcon source={icons.star} focused={focused} />
           ),
         }}
       />

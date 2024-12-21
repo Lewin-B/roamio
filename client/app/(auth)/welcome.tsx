@@ -37,11 +37,6 @@ const Home = () => {
       >
         {onboarding.map((item) => (
           <View key={item.id} className="flex items-center justify-center p-5">
-            <Image
-              source={item.image}
-              className="w-full h-[300px]"
-              resizeMode="contain"
-            />
             <View className="flex flex-row items-center justify-center w-full mt-10">
               <Text className="text-black text-3xl font-bold mx-10 text-center">
                 {item.title}
