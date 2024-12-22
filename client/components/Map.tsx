@@ -128,7 +128,7 @@ const Map = ({
       showsUserLocation={true}
       userInterfaceStyle="light"
     >
-      {places?.map((place, index) => (
+      {places?.map((place) => (
         <Marker
           key={place.place_id}
           coordinate={{
