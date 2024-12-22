@@ -1,22 +1,62 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
-import MapViewDirections from "react-native-maps-directions";
 
-import { icons } from "@/constants";
 import { useFetch } from "@/lib/fetch";
-import { useDriverStore, useLocationStore } from "@/store";
-import { Driver, MarkerData } from "@/types/type";
 
-const directionsAPI = process.env.EXPO_PUBLIC_DIRECTIONS_API_KEY;
+const placesAPI = process.env.EXPO_PUBLIC_PLACES_API_KEY;
+const RADIUS_CONST = 50000;
+const LATITUDE_DELTA = 0.04;
+const LONGITUDE_DELTA = 0.04;
 
-const Map = () => {
-  const {
-    userLongitude,
-    userLatitude,
-    destinationLatitude,
-    destinationLongitude,
-  } = useLocationStore();
+interface Place {
+  place_id: string;
+  name: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+}
+
+export const calculateRegion = ({
+  userLatitude,
+  userLongitude,
+}: {
+  userLatitude: number;
+  userLongitude: number;
+}) => {
+  return {
+    latitude: userLatitude,
+    longitude: userLongitude,
+    latitudeDelta: LONGITUDE_DELTA,
+    longitudeDelta: LATITUDE_DELTA,
+  };
+};
+
+const Map = ({
+  userLatitude,
+  userLongitude,
+}: {
+  userLatitude: number;
+  userLongitude: number;
+}) => {
+  const region = calculateRegion({ userLatitude, userLongitude });
+
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?keyword=cruise&location=${userLatitude},${userLongitude}&radius=${RADIUS_CONST}&key=${placesAPI}`;
+
+  const { data, loading, error } = useFetch<any>(url);
+  const [places, setPlaces] = useState<Place[]>();
+
+  useEffect(() => {
+    if (data) {
+      setPlaces(data?.results);
+    }
+    if (error) {
+      console.error("Error fetching places: ", error);
+    }
+  }, [data, error]);
 
   if (loading || (!userLatitude && !userLongitude))
     return (
@@ -43,46 +83,18 @@ const Map = () => {
       showsUserLocation={true}
       userInterfaceStyle="light"
     >
-      {markers.map((marker, index) => (
+      {places?.map((place, index) => (
         <Marker
-          key={marker.id}
+          key={place.place_id}
           coordinate={{
-            latitude: marker.latitude,
-            longitude: marker.longitude,
+            latitude: place.geometry.location.lat,
+            longitude: place.geometry.location.lng,
           }}
-          title={marker.title}
-          image={
-            selectedDriver === +marker.id ? icons.selectedMarker : icons.marker
-          }
+          tappable={true}
+          title={place.name}
+          onPress={}
         />
       ))}
-
-      {destinationLatitude && destinationLongitude && (
-        <>
-          <Marker
-            key="destination"
-            coordinate={{
-              latitude: destinationLatitude,
-              longitude: destinationLongitude,
-            }}
-            title="Destination"
-            image={icons.pin}
-          />
-          <MapViewDirections
-            origin={{
-              latitude: userLatitude!,
-              longitude: userLongitude!,
-            }}
-            destination={{
-              latitude: destinationLatitude,
-              longitude: destinationLongitude,
-            }}
-            apikey={directionsAPI!}
-            strokeColor="#0286FF"
-            strokeWidth={2}
-          />
-        </>
-      )}
     </MapView>
   );
 };

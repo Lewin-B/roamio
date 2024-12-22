@@ -3,18 +3,16 @@ import { useAuth } from "@clerk/clerk-expo";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
-import { Text, View, TouchableOpacity, Image } from "react-native";
+import { Text, View, TouchableOpacity, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import GoogleTextInput from "@/components/GoogleTextInput";
+import Map from "@/components/Map";
 import { icons } from "@/constants";
-import { useLocationStore } from "@/store";
 
 const Home = () => {
   const { user } = useUser();
   const { signOut } = useAuth();
-
-  const { setUserLocation, setDestinationLocation } = useLocationStore();
 
   const handleSignOut = () => {
     signOut();
@@ -22,6 +20,9 @@ const Home = () => {
   };
 
   const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [latitude, setLatitude] = useState<number>();
+  const [longitude, setLongitude] = useState<number>();
+  const [viewPlace, setViewPlace] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -33,16 +34,10 @@ const Home = () => {
 
       let location = await Location.getCurrentPositionAsync({});
 
-      const address = await Location.reverseGeocodeAsync({
-        latitude: location.coords?.latitude!,
-        longitude: location.coords?.longitude!,
-      });
+      setLatitude(location.coords?.latitude);
+      setLongitude(location.coords?.longitude);
 
-      setUserLocation({
-        latitude: location.coords?.latitude,
-        longitude: location.coords?.longitude,
-        address: `${address[0].name}, ${address[0].region}`,
-      });
+      console.log("Address: ", address);
     })();
   }, []);
 
@@ -51,37 +46,41 @@ const Home = () => {
     longitude: number;
     address: string;
   }) => {
-    setDestinationLocation(location);
+    console.log("Pressed");
   };
 
   return (
-    <SafeAreaView className="bg-general-500 p-5">
-      <>
-        <View className="flex flex-row items-center justify-between my-5">
-          <Text className="text-2xl font-JakartaExtraBold">
-            Welcome {user?.firstName}
-          </Text>
-          <TouchableOpacity
-            onPress={handleSignOut}
-            className="justify-center items-center w-10 h-10 rounded-full bg-white"
-          >
-            <Image source={icons.out} className="w-4 h-4" />
-          </TouchableOpacity>
-        </View>
-
-        <GoogleTextInput
-          icon={icons.search}
-          containerStyle="bg-white shadow-md shadow-neutral-300"
-          handlePress={handleDestinationPress}
-        />
-
+    <ScrollView>
+      <SafeAreaView className="bg-general-500 p-5">
         <>
-          <Text className="text-xl font-JakartaBold mt-5 mb-3">
-            Your current location
-          </Text>
+          <View className="flex flex-row items-center justify-between my-5">
+            <Text className="text-2xl font-JakartaExtraBold">
+              Welcome {user?.firstName}
+            </Text>
+            <TouchableOpacity
+              onPress={handleSignOut}
+              className="justify-center items-center w-10 h-10 rounded-full bg-white"
+            >
+              <Image source={icons.out} className="w-4 h-4" />
+            </TouchableOpacity>
+          </View>
+          <GoogleTextInput
+            icon={icons.search}
+            containerStyle="bg-white shadow-md shadow-neutral-300"
+            handlePress={handleDestinationPress}
+          />
+          <>
+            <Text className="text-xl font-JakartaBold mt-5 mb-3">
+              Your current location
+            </Text>
+            <Map
+              userLatitude={latitude as number}
+              userLongitude={longitude as number}
+            />
+          </>
         </>
-      </>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScrollView>
   );
 };
 
