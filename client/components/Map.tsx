@@ -9,15 +9,42 @@ const RADIUS_CONST = 50000;
 const LATITUDE_DELTA = 0.04;
 const LONGITUDE_DELTA = 0.04;
 
-interface Place {
-  place_id: string;
-  name: string;
+export interface Place {
+  business_status: string;
   geometry: {
     location: {
       lat: number;
       lng: number;
     };
+    viewport: {
+      northeast: object; // Replace `object` with a more specific type if needed
+      southwest: object; // Replace `object` with a more specific type if needed
+    };
   };
+  icon: string;
+  icon_background_color: string;
+  icon_mask_base_uri: string;
+  name: string;
+  photos?: Photo[]; // Optional because it may not always exist
+  place_id: string;
+  plus_code?: {
+    compound_code: string;
+    global_code: string;
+  };
+  rating?: number; // Optional because it may not always exist
+  reference: string;
+  scope: string;
+  types: string[];
+  user_ratings_total?: number; // Optional because it may not always exist
+  vicinity: string;
+  photoUrl?: string;
+}
+
+interface Photo {
+  height: number;
+  html_attributions: string[]; // Array of attribution strings
+  photo_reference: string;
+  width: number;
 }
 
 export const calculateRegion = ({
@@ -35,12 +62,18 @@ export const calculateRegion = ({
   };
 };
 
+const fetchPhotoUrl = (photoReference: string): string => {
+  return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${placesAPI}`;
+};
+
 const Map = ({
   userLatitude,
   userLongitude,
+  markerPress,
 }: {
   userLatitude: number;
   userLongitude: number;
+  markerPress: (place: Place) => void;
 }) => {
   const region = calculateRegion({ userLatitude, userLongitude });
 
@@ -51,7 +84,14 @@ const Map = ({
 
   useEffect(() => {
     if (data) {
-      setPlaces(data?.results);
+      const updatedPlaces = data.results.map((place: Place) => {
+        const photoReference = place.photos?.[0]?.photo_reference;
+        return {
+          ...place,
+          photoUrl: photoReference ? fetchPhotoUrl(photoReference) : undefined,
+        };
+      });
+      setPlaces(updatedPlaces);
     }
     if (error) {
       console.error("Error fetching places: ", error);
@@ -92,7 +132,9 @@ const Map = ({
           }}
           tappable={true}
           title={place.name}
-          onPress={}
+          onPress={() => {
+            markerPress(place);
+          }}
         />
       ))}
     </MapView>

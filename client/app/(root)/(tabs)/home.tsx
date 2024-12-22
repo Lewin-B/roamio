@@ -4,11 +4,16 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import { Text, View, TouchableOpacity, Image, ScrollView } from "react-native";
+import ReactNativeModal from "react-native-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import type { Place } from "@/components/Map";
+
+import CustomButton from "@/components/CustomButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
 import Map from "@/components/Map";
 import { icons } from "@/constants";
+import { useFetch } from "@/lib/fetch";
 
 const Home = () => {
   const { user } = useUser();
@@ -23,6 +28,7 @@ const Home = () => {
   const [latitude, setLatitude] = useState<number>();
   const [longitude, setLongitude] = useState<number>();
   const [viewPlace, setViewPlace] = useState<boolean>(false);
+  const [selectedPlace, setSelectedPlace] = useState<Place>();
 
   useEffect(() => {
     (async () => {
@@ -36,8 +42,6 @@ const Home = () => {
 
       setLatitude(location.coords?.latitude);
       setLongitude(location.coords?.longitude);
-
-      console.log("Address: ", address);
     })();
   }, []);
 
@@ -47,6 +51,13 @@ const Home = () => {
     address: string;
   }) => {
     console.log("Pressed");
+  };
+
+  const HandleMarkerPress = async (place: Place) => {
+    console.log("Place: ", place.photoUrl);
+
+    setViewPlace(true);
+    setSelectedPlace(place);
   };
 
   return (
@@ -76,9 +87,28 @@ const Home = () => {
             <Map
               userLatitude={latitude as number}
               userLongitude={longitude as number}
+              markerPress={HandleMarkerPress}
             />
           </>
         </>
+        <ReactNativeModal isVisible={viewPlace}>
+          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
+            <Text className="text-3xl font-JakartaBold text-center">
+              {selectedPlace?.name}
+            </Text>
+            <Image
+              source={{ uri: selectedPlace?.photoUrl }}
+              className="w-[250px] h-[250px] mx-auto my-5 rounded-lg"
+            />
+            <CustomButton
+              title="Return"
+              onPress={() => {
+                setViewPlace(false);
+              }}
+              className="mt-5"
+            />
+          </View>
+        </ReactNativeModal>
       </SafeAreaView>
     </ScrollView>
   );
