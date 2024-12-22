@@ -1,5 +1,7 @@
 import { TextInputProps, TouchableOpacityProps } from "react-native";
 
+import type { Place } from "@/components/Map";
+
 declare interface Driver {
   id: number;
   first_name: string;
@@ -67,15 +69,7 @@ declare interface GoogleInputProps {
   initialLocation?: string;
   containerStyle?: string;
   textInputBackgroundColor?: string;
-  handlePress: ({
-    latitude,
-    longitude,
-    address,
-  }: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  }) => void;
+  handlePress: (place: Place | null) => void;
 }
 
 declare interface InputFieldProps extends TextInputProps {

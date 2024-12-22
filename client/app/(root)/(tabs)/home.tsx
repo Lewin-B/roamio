@@ -3,7 +3,14 @@ import { useAuth } from "@clerk/clerk-expo";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
-import { Text, View, TouchableOpacity, Image, ScrollView } from "react-native";
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  ImageBackground,
+} from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -13,7 +20,6 @@ import CustomButton from "@/components/CustomButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
 import Map from "@/components/Map";
 import { icons } from "@/constants";
-import { useFetch } from "@/lib/fetch";
 
 const Home = () => {
   const { user } = useUser();
@@ -45,72 +51,80 @@ const Home = () => {
     })();
   }, []);
 
-  const handleDestinationPress = (location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  }) => {
-    console.log("Pressed");
-  };
-
-  const HandleMarkerPress = async (place: Place) => {
-    console.log("Place: ", place.photoUrl);
-
+  const handleMarkerPress = async (place: Place | null) => {
+    if (!place) {
+      return;
+    }
     setViewPlace(true);
     setSelectedPlace(place);
   };
 
   return (
-    <ScrollView>
-      <SafeAreaView className="bg-general-500 p-5">
+    <SafeAreaView className="bg-general-500 p-5">
+      <>
+        <View className="flex flex-row items-center justify-between my-5">
+          <Text className="text-2xl font-JakartaExtraBold">
+            Welcome {user?.firstName}
+          </Text>
+          <TouchableOpacity
+            onPress={handleSignOut}
+            className="justify-center items-center w-10 h-10 rounded-full bg-white"
+          >
+            <Image source={icons.out} className="w-4 h-4" />
+          </TouchableOpacity>
+        </View>
+        <GoogleTextInput
+          icon={icons.search}
+          containerStyle="bg-white shadow-md shadow-neutral-300"
+          handlePress={handleMarkerPress}
+        />
         <>
-          <View className="flex flex-row items-center justify-between my-5">
-            <Text className="text-2xl font-JakartaExtraBold">
-              Welcome {user?.firstName}
-            </Text>
-            <TouchableOpacity
-              onPress={handleSignOut}
-              className="justify-center items-center w-10 h-10 rounded-full bg-white"
-            >
-              <Image source={icons.out} className="w-4 h-4" />
-            </TouchableOpacity>
-          </View>
-          <GoogleTextInput
-            icon={icons.search}
-            containerStyle="bg-white shadow-md shadow-neutral-300"
-            handlePress={handleDestinationPress}
+          <Text className="text-xl font-JakartaBold mt-5 mb-3">
+            Your current location
+          </Text>
+          <Map
+            userLatitude={latitude as number}
+            userLongitude={longitude as number}
+            markerPress={handleMarkerPress}
           />
-          <>
-            <Text className="text-xl font-JakartaBold mt-5 mb-3">
-              Your current location
-            </Text>
-            <Map
-              userLatitude={latitude as number}
-              userLongitude={longitude as number}
-              markerPress={HandleMarkerPress}
-            />
-          </>
         </>
-        <ReactNativeModal isVisible={viewPlace}>
-          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-            <Text className="text-3xl font-JakartaBold text-center">
-              {selectedPlace?.name}
-            </Text>
-            <Image
-              source={{ uri: selectedPlace?.photoUrl }}
-              className="w-[250px] h-[250px] mx-auto my-5 rounded-lg"
-            />
+      </>
+      <ReactNativeModal isVisible={viewPlace}>
+        <View className="px-7 py-9  min-h-[500px]">
+          <ImageBackground
+            source={{ uri: selectedPlace?.photoUrl }}
+            className="flex  h-[300px]"
+          >
+            <View className="bg-black/50 px-3 py-2 flex flex-row justify-center align-top">
+              <TouchableOpacity
+                onPress={() => {
+                  setViewPlace(false);
+                }}
+              ></TouchableOpacity>
+              <Text className="text-2xl font-JakartaBold text-white text-center ">
+                {selectedPlace?.name}
+              </Text>
+            </View>
+          </ImageBackground>
+          <View className="bg-white bg-opacity-70 p-2 flex-row justify-center">
             <CustomButton
-              title="Return"
+              title="Review"
               onPress={() => {
                 setViewPlace(false);
               }}
-              className="mt-5"
+              className="w-[120px] mx-2"
+            />
+            <CustomButton
+              title="Close"
+              onPress={() => {
+                setViewPlace(false);
+              }}
+              className="w-[120px] mx-2"
             />
           </View>
-        </ReactNativeModal>
-      </SafeAreaView>
-    </ScrollView>
+        </View>
+      </ReactNativeModal>
+    </SafeAreaView>
   );
 };
 

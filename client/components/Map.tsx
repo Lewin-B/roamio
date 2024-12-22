@@ -62,8 +62,17 @@ export const calculateRegion = ({
   };
 };
 
-const fetchPhotoUrl = (photoReference: string): string => {
+export const fetchPhotoUrl = (photoReference: string): string => {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${placesAPI}`;
+};
+
+export const updatePlace = (place: Place) => {
+  console.log("Places: ", place);
+  const photoReference = place.photos?.[0]?.photo_reference;
+  return {
+    ...place,
+    photoUrl: photoReference ? fetchPhotoUrl(photoReference) : undefined,
+  };
 };
 
 const Map = ({
@@ -73,7 +82,7 @@ const Map = ({
 }: {
   userLatitude: number;
   userLongitude: number;
-  markerPress: (place: Place) => void;
+  markerPress: (place: Place | null) => void;
 }) => {
   const region = calculateRegion({ userLatitude, userLongitude });
 
@@ -84,13 +93,9 @@ const Map = ({
 
   useEffect(() => {
     if (data) {
-      const updatedPlaces = data.results.map((place: Place) => {
-        const photoReference = place.photos?.[0]?.photo_reference;
-        return {
-          ...place,
-          photoUrl: photoReference ? fetchPhotoUrl(photoReference) : undefined,
-        };
-      });
+      const updatedPlaces = data.results.map((place: Place) =>
+        updatePlace(place)
+      );
       setPlaces(updatedPlaces);
     }
     if (error) {
@@ -115,7 +120,7 @@ const Map = ({
   return (
     <MapView
       provider={PROVIDER_DEFAULT}
-      className="w-full h-full rounded-2xl"
+      className="w-full h-[400px] rounded-2xl pb-10"
       tintColor="black"
       mapType="mutedStandard"
       showsPointsOfInterest={false}

@@ -1,7 +1,10 @@
 import { View, Image } from "react-native";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 
+import { updatePlace } from "./Map";
+
 import { icons } from "@/constants";
+import { fetchAPI } from "@/lib/fetch";
 import { GoogleInputProps } from "@/types/type";
 
 const googlePlacesApiKey = process.env.EXPO_PUBLIC_PLACES_API_KEY;
@@ -52,12 +55,18 @@ const GoogleTextInput = ({
             zIndex: 99,
           },
         }}
-        onPress={(data, details = null) => {
-          handlePress({
-            latitude: details?.geometry.location.lat!,
-            longitude: details?.geometry.location.lng!,
-            address: data.description,
-          });
+        onPress={async (data, details = null) => {
+          console.log("Data: ", data);
+
+          const url = `https://maps.googleapis.com/maps/api/place/details/json?placeid=${data.place_id}&key=${googlePlacesApiKey}`;
+
+          const result = await fetchAPI(url);
+          let place = null;
+          if (result.result) {
+            place = updatePlace(result.result);
+          }
+
+          handlePress(place);
         }}
         query={{
           key: googlePlacesApiKey,
