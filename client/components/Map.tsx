@@ -38,6 +38,8 @@ export interface Place {
   user_ratings_total?: number; // Optional because it may not always exist
   vicinity: string;
   photoUrl?: string;
+  website: string;
+  formatted_address: string;
 }
 
 interface Photo {
@@ -67,7 +69,6 @@ export const fetchPhotoUrl = (photoReference: string): string => {
 };
 
 export const updatePlace = (place: Place) => {
-  console.log("Places: ", place);
   const photoReference = place.photos?.[0]?.photo_reference;
   return {
     ...place,

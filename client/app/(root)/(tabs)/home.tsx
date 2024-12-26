@@ -8,7 +8,6 @@ import {
   View,
   TouchableOpacity,
   Image,
-  ScrollView,
   ImageBackground,
 } from "react-native";
 import ReactNativeModal from "react-native-modal";
@@ -111,6 +110,12 @@ const Home = () => {
               title="Review"
               onPress={() => {
                 setViewPlace(false);
+                router.navigate({
+                  pathname: `/(root)/place-view`,
+                  params: {
+                    id: selectedPlace?.place_id,
+                  },
+                });
               }}
               className="w-[120px] mx-2"
             />

@@ -56,8 +56,6 @@ const GoogleTextInput = ({
           },
         }}
         onPress={async (data, details = null) => {
-          console.log("Data: ", data);
-
           const url = `https://maps.googleapis.com/maps/api/place/details/json?placeid=${data.place_id}&key=${googlePlacesApiKey}`;
 
           const result = await fetchAPI(url);
