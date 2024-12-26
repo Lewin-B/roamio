@@ -11,6 +11,9 @@ import {
   ImageBackground,
   ScrollView,
 } from "react-native";
+import { ActivityIndicator } from "react-native";
+import ReactNativeModal from "react-native-modal";
+import { FAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { Place } from "@/components/Map";
@@ -27,62 +30,31 @@ interface NeonPlace {
   image: string;
   location: string;
   ranking: number;
+  types: string;
+  formatted_address: string;
+  website: string;
+  reviews: Review[];
 }
 
-const reviews = [
-  {
-    name: "Jack",
-    username: "@jack",
-    body: "I've never seen anything like this before. It's amazing. I love it.",
-    img: "https://avatar.vercel.sh/jack",
-  },
-  {
-    name: "Jill",
-    username: "@jill",
-    body: "I don't know what to say. I'm speechless. This is amazing.",
-    img: "https://avatar.vercel.sh/jill",
-  },
-  {
-    name: "John",
-    username: "@john",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/john",
-  },
-  {
-    name: "Jane",
-    username: "@jane",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jane",
-  },
-  {
-    name: "Jenny",
-    username: "@jenny",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/jenny",
-  },
-  {
-    name: "James",
-    username: "@james",
-    body: "I'm at a loss for words. This is amazing. I love it.",
-    img: "https://avatar.vercel.sh/james",
-  },
-];
-
-const firstRow = reviews.slice(0, reviews.length / 2);
-const secondRow = reviews.slice(reviews.length / 2);
+interface Review {
+  userId: string;
+  placeId: string;
+  username: string;
+  text_review: string;
+  rating: number;
+  image: string;
+}
 
 const googlePlacesApiKey = process.env.EXPO_PUBLIC_PLACES_API_KEY ?? "";
 
 const ReviewCard = ({
-  img,
-  name,
+  image,
   username,
-  body,
+  text_review,
 }: {
-  img: string;
-  name: string;
+  image: string;
   username: string;
-  body: string;
+  text_review: string;
 }) => {
   return (
     <TouchableOpacity
@@ -98,23 +70,28 @@ const ReviewCard = ({
         <Image
           className="rounded-full"
           style={{ width: 32, height: 32 }}
-          source={{ uri: img }}
+          source={{ uri: image }}
           alt=""
         />
         <View className="flex flex-col">
-          <Text className="text-sm font-medium dark:text-white">{name}</Text>
+          <Text className="text-sm font-medium dark:text-white">
+            {username}
+          </Text>
           <Text className="text-xs font-medium dark:text-white/40">
             {username}
           </Text>
         </View>
       </View>
-      <Text className="mt-2 text-sm">{body}</Text>
+      <Text className="mt-2 text-sm">{text_review}</Text>
     </TouchableOpacity>
   );
 };
 
 const PlaceView = () => {
   const [currentPlace, setCurrentPlace] = useState<NeonPlace | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
+  const [reviewModal, setReviewModal] = useState<boolean>(false);
   const [ratingColor, setRatingColor] = useState<string>("white");
   const { id: preId } = useLocalSearchParams();
 
@@ -122,6 +99,7 @@ const PlaceView = () => {
 
   const getPlace = useCallback(
     async (id: string) => {
+      setLoading(true);
       try {
         const result = await fetchAPI(`/(api)/(places)/${id}`);
         if (result.data.length === 0) {
@@ -163,7 +141,9 @@ const PlaceView = () => {
         }
       } catch (error) {
         console.error("Error fetching or inserting place:", error);
+        setError(true);
       }
+      setLoading(false);
     },
     [setCurrentPlace]
   );
@@ -188,6 +168,22 @@ const PlaceView = () => {
     }
     console.log("Rating Color: ", ratingColor);
   }, [currentPlace?.rating, ratingColor, setRatingColor]);
+
+  if (loading) {
+    return (
+      <View>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View>
+        <Text>Error</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView>
@@ -218,8 +214,27 @@ const PlaceView = () => {
               <Text className="text-3xl font-JakartaBold text-white mb-5">
                 {currentPlace?.name}
               </Text>
+            </View>
+          </ImageBackground>
+        </View>
+        <View className="flex my-3">
+          <View className="flex flex-col justify-evenly items-center">
+            <View className="flex items-center border border-gray-950/[.1] bg-gray-950/[.01] p-2 rounded-lg">
+              <View className="flex-row justify-start">
+                <Text className="text-4xl font-medium">
+                  {currentPlace?.formatted_address}
+                </Text>
+              </View>
+              <Text className="text-md font-medium text-black">
+                {currentPlace?.types}
+              </Text>
+            </View>
+          </View>
+          <View className="flex flex-row justify-evenly">
+            <View className="flex flex-col justify-center items-center">
+              <Text className="text-lg font-medium">Rating</Text>
               <View
-                className="w-14 h-14 rounded-full flex items-center justify-center mx-3"
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-3"
                 style={{ backgroundColor: ratingColor }}
               >
                 <Text className="text-white text-2xl font-JakartaBold">
@@ -227,31 +242,46 @@ const PlaceView = () => {
                 </Text>
               </View>
             </View>
-          </ImageBackground>
-        </View>
-        <View className="flex ">
-          <View className="flex flex-row justify-evenly items-center">
-            <View className="flex items-center">
-              <Text className="text-2xl font-JakartaBold text-black">
-                Place Ranking
-              </Text>
-              <View className="flex h-28 w-28 items-center justify-center">
-                <Text className="text-4xl font-JakartaBold">
+            <View className="flex flex-col justify-center items-center">
+              <Text className="text-lg font-medium">Ranking</Text>
+              <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 bg-gray-950/[.01]">
+                <Text className="text-black text-2xl font-JakartaBold">
                   # {currentPlace?.ranking}
                 </Text>
               </View>
             </View>
+            <View className="flex flex-col justify-center items-center">
+              <Text className="text-lg font-medium">Misc.</Text>
+              <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 border-gray-950/[.1] bg-gray-950/[.01]">
+                <Text className="text-black text-2xl font-JakartaBold">
+                  {currentPlace?.rating}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg  bg-background md:shadow-xl">
-            <Marquee>
+          <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg  bg-background md:shadow-xl my-3">
+            {(currentPlace?.reviews?.length ?? 0) > 1 ? (
+              <Marquee>
+                <View className="flex flex-row mx-2">
+                  {currentPlace?.reviews.map((review) => (
+                    <ReviewCard key={review.username} {...review} />
+                  ))}
+                </View>
+              </Marquee>
+            ) : (
               <View className="flex flex-row mx-2">
-                {reviews.map((review) => (
+                {currentPlace?.reviews.map((review) => (
                   <ReviewCard key={review.username} {...review} />
                 ))}
               </View>
-            </Marquee>
+            )}
           </View>
         </View>
+        <FAB
+          className="absolute bottom-0 bg-gray-950/[.01] border-gray-950/[.1] rounded-full right-4"
+          icon="plus"
+          onPress={() => setReviewModal(true)}
+        />
       </SafeAreaView>
     </ScrollView>
   );

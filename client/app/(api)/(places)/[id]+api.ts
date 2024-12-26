@@ -7,12 +7,26 @@ export async function GET(request: Request, { id }: { id: string }) {
   try {
     const sql = neon(`${process.env.DATABASE_URL}`);
     const response = await sql`
-          SELECT
-              *
-          FROM 
-              places
-          WHERE 
-              places.place_id = ${id}
+          SELECT 
+    places.*,
+    'reviews', json_agg(
+        json_build_object(
+            'placeId', reviews.place_id,
+            'userId', reviews.user_id,
+            'image', reviews.image,
+            'text_review', reviews.text_review,
+            'username', reviews.username,
+            'rating', reviews.rating
+        )
+      ) AS reviews
+        FROM 
+            places
+        LEFT JOIN
+            reviews ON places.id = reviews.place_id
+        WHERE 
+            places.id = 9
+        GROUP BY
+            places.id;
       `;
 
     return Response.json({ data: response });
