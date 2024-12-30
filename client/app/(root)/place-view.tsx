@@ -27,6 +27,7 @@ import { cn } from "@/lib/cn";
 import { fetchAPI } from "@/lib/fetch";
 
 interface NeonPlace {
+  id: number;
   name: string;
   place_id: string;
   rating: number;
@@ -40,8 +41,8 @@ interface NeonPlace {
 }
 
 interface Review {
-  userId: string;
-  placeId: string;
+  userId: number;
+  placeId: number;
   username: string;
   text_review: string;
   rating: number;
@@ -55,6 +56,12 @@ interface User {
   email: string;
   clerk_id: string;
   reviews: Review[];
+}
+
+interface Match {
+  winner: string;
+  loser: string;
+  tie: string[];
 }
 
 const circles = [
@@ -114,9 +121,7 @@ const PlaceView = () => {
   const [ratingColor, setRatingColor] = useState<string>("white");
   const [selectedRating, setSelectedRating] = useState<number>(-1);
   const [leftBound, setLeftBound] = useState<number>(0);
-  const [wins, setWins] = useState<number>(0);
-  const [draws, setDraws] = useState<number>(0);
-  const [losses, setLosses] = useState<number>(0);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [rightBound, setRightBound] = useState<number>(0);
   const [text, setText] = useState<string>("");
   const { id: preId } = useLocalSearchParams();
@@ -126,43 +131,64 @@ const PlaceView = () => {
     setSelectedRating(index);
   };
 
-  const calibrateSearch = (win: boolean, draw: boolean, loss: boolean) => {
+  const calibrateSearch = (
+    result: string,
+    teamOne: string,
+    teamTwo: string
+  ) => {
     const mid = Math.floor(leftBound + rightBound) / 2;
-    if (win) {
+    let match: Match = { winner: "", loser: "", tie: [] };
+    if (result === "win") {
       setLeftBound(mid + 1);
-      setWins(wins + 1);
-    }
-    if (draw) {
-      setLeftBound(mid + 1);
-      setDraws(draws + 1);
-    }
-    if (loss) {
+      match = {
+        winner: teamOne,
+        loser: teamTwo,
+        tie: [],
+      };
+    } else if (result === "loss") {
       setRightBound(mid - 1);
-      setLosses(losses + 1);
+      match = {
+        winner: teamTwo,
+        loser: teamOne,
+        tie: [],
+      };
+    } else {
+      setLeftBound(mid + 1);
+      match = {
+        winner: "",
+        loser: "",
+        tie: [teamOne, teamTwo],
+      };
     }
+
+    const newMatches = matches;
+    newMatches.push(match);
+    setMatches(newMatches);
   };
 
   const handleSubmit = () => {
-    // Send API info
-    let totalWins = wins;
-    let totalDraws = draws;
-    let totalLosses = losses;
-
+    const newMatches = matches;
     if (selectedRating === 0) {
-      totalWins += 1;
+      const match = { winner: currentPlace?.name || "", loser: "", tie: [] };
+      newMatches.push(match);
     } else if (selectedRating === 1) {
-      totalDraws += 1;
+      const match = {
+        winner: "",
+        loser: "",
+        tie: currentPlace?.name ? [currentPlace.name] : [""],
+      };
+      newMatches.push(match);
     } else if (selectedRating === 2) {
-      totalLosses += 1;
+      const match = { winner: "", loser: currentPlace?.name || "", tie: [] };
+      newMatches.push(match);
     } else {
       alert("Please give a rating to the place");
+      return;
     }
 
     const apiInfo = {
       place_info: currentPlace,
-      wins: totalWins,
-      draws: totalDraws,
-      losses: totalLosses,
+      matches: newMatches,
       text_review: text,
     };
 
@@ -175,19 +201,6 @@ const PlaceView = () => {
     async (id: string) => {
       setLoading(true);
       try {
-        const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
-
-        if (!userResult) {
-          setError(true);
-          return;
-        }
-
-        // Calibrate Bin search index
-        setLeftBound(0);
-        setRightBound(userResult.data[0].reviews.length - 1);
-
-        setFullUser(userResult.data[0]);
-
         const result = await fetchAPI(`/(api)/(places)/${id}`);
         if (result.data.length === 0) {
           // Fetch detailed place info from Google API
@@ -225,6 +238,30 @@ const PlaceView = () => {
         } else {
           console.log("Place found in database: ", result.data);
           setCurrentPlace(result.data[0]);
+
+          const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
+
+          if (!userResult) {
+            setError(true);
+            return;
+          }
+
+          // filter reviews
+          const filteredReviews = userResult.data[0].reviews.filter(
+            (review: Review) => review.placeId !== result.data[0]?.id
+          );
+
+          console.log("filtered reviews: ", filteredReviews);
+
+          // Calibrate Bin search index
+          setLeftBound(0);
+          setRightBound(filteredReviews.length - 1);
+
+          // Set full user with filtered reviews
+          setFullUser({
+            ...userResult.data[0],
+            reviews: filteredReviews,
+          });
         }
       } catch (error) {
         console.error("Error fetching or inserting place:", error);
@@ -232,7 +269,7 @@ const PlaceView = () => {
       }
       setLoading(false);
     },
-    [setCurrentPlace]
+    [setCurrentPlace, user?.id]
   );
 
   useEffect(() => {
@@ -408,13 +445,29 @@ const PlaceView = () => {
                 </Text>
                 <View className="flex-row justify-evenly items-center space-x-7 ">
                   <TouchableOpacity
-                    onPress={() => calibrateSearch(true, false, false)}
+                    onPress={() =>
+                      calibrateSearch(
+                        "win",
+                        currentPlace?.name || "",
+                        fullUser?.reviews[
+                          Math.floor((leftBound + rightBound) / 2)
+                        ].name || ""
+                      )
+                    }
                     className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
                   >
                     <Text className="font-medium">{currentPlace?.name}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => calibrateSearch(false, false, true)}
+                    onPress={() =>
+                      calibrateSearch(
+                        "loss",
+                        currentPlace?.name || "",
+                        fullUser?.reviews[
+                          Math.floor((leftBound + rightBound) / 2)
+                        ].name || ""
+                      )
+                    }
                     className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
                   >
                     <Text className="font-medium">
@@ -426,6 +479,19 @@ const PlaceView = () => {
                     </Text>
                   </TouchableOpacity>
                 </View>
+                <CustomButton
+                  className="mt-3 w-[150px]"
+                  title="Draw"
+                  onPress={() =>
+                    calibrateSearch(
+                      "draw",
+                      currentPlace?.name || "",
+                      fullUser?.reviews[
+                        Math.floor((leftBound + rightBound) / 2)
+                      ].name || ""
+                    )
+                  }
+                />
               </View>
             )}
 
@@ -447,6 +513,13 @@ const PlaceView = () => {
                 title="Review"
                 onPress={() => {
                   handleSubmit();
+                  setReviewModal(false);
+                  setSelectedRating(-1);
+                  setMatches([]);
+                  setLeftBound(0);
+                  setRightBound(fullUser?.reviews?.length || 0 - 1);
+                  setText("");
+                  alert("Review Submitted!");
                 }}
                 className="w-[120px] mx-2"
               />
@@ -455,9 +528,9 @@ const PlaceView = () => {
                 onPress={() => {
                   setReviewModal(false);
                   setSelectedRating(-1);
-                  setLosses(0);
-                  setWins(0);
-                  setDraws(0);
+                  setMatches([]);
+                  setLeftBound(0);
+                  setRightBound(fullUser?.reviews?.length || 0 - 1);
                   setText("");
                 }}
                 className="w-[120px] mx-2"
