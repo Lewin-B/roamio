@@ -1,4 +1,5 @@
 import { Marquee } from "@animatereactnative/marquee";
+import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
@@ -10,14 +11,16 @@ import {
   TouchableOpacity,
   ImageBackground,
   ScrollView,
+  Modal,
+  TextInput,
 } from "react-native";
-import { ActivityIndicator } from "react-native";
-import ReactNativeModal from "react-native-modal";
+import { ActivityIndicator } from "react-native-paper";
 import { FAB } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { Place } from "@/components/Map";
 
+import CustomButton from "@/components/CustomButton";
 import { fetchPhotoUrl } from "@/components/Map";
 import { icons } from "@/constants";
 import { cn } from "@/lib/cn";
@@ -43,7 +46,22 @@ interface Review {
   text_review: string;
   rating: number;
   image: string;
+  name: string;
 }
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  clerk_id: string;
+  reviews: Review[];
+}
+
+const circles = [
+  { color: "#1ce125", description: "I liked it!" },
+  { color: "yellow", description: "It was mid" },
+  { color: "red", description: "It didn't like it" },
+];
 
 const googlePlacesApiKey = process.env.EXPO_PUBLIC_PLACES_API_KEY ?? "";
 
@@ -88,12 +106,68 @@ const ReviewCard = ({
 };
 
 const PlaceView = () => {
+  const [fullUser, setFullUser] = useState<User | null>(null);
   const [currentPlace, setCurrentPlace] = useState<NeonPlace | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
   const [reviewModal, setReviewModal] = useState<boolean>(false);
   const [ratingColor, setRatingColor] = useState<string>("white");
+  const [selectedRating, setSelectedRating] = useState<number>(-1);
+  const [leftBound, setLeftBound] = useState<number>(0);
+  const [wins, setWins] = useState<number>(0);
+  const [draws, setDraws] = useState<number>(0);
+  const [losses, setLosses] = useState<number>(0);
+  const [rightBound, setRightBound] = useState<number>(0);
+  const [text, setText] = useState<string>("");
   const { id: preId } = useLocalSearchParams();
+  const { user } = useUser();
+
+  const toggleRating = (index: number) => {
+    setSelectedRating(index);
+  };
+
+  const calibrateSearch = (win: boolean, draw: boolean, loss: boolean) => {
+    const mid = Math.floor(leftBound + rightBound) / 2;
+    if (win) {
+      setLeftBound(mid + 1);
+      setWins(wins + 1);
+    }
+    if (draw) {
+      setLeftBound(mid + 1);
+      setDraws(draws + 1);
+    }
+    if (loss) {
+      setRightBound(mid - 1);
+      setLosses(losses + 1);
+    }
+  };
+
+  const handleSubmit = () => {
+    // Send API info
+    let totalWins = wins;
+    let totalDraws = draws;
+    let totalLosses = losses;
+
+    if (selectedRating === 0) {
+      totalWins += 1;
+    } else if (selectedRating === 1) {
+      totalDraws += 1;
+    } else if (selectedRating === 2) {
+      totalLosses += 1;
+    } else {
+      alert("Please give a rating to the place");
+    }
+
+    const apiInfo = {
+      place_info: currentPlace,
+      wins: totalWins,
+      draws: totalDraws,
+      losses: totalLosses,
+      text_review: text,
+    };
+
+    console.log("info: ", apiInfo);
+  };
 
   const id = String(preId ?? "");
 
@@ -101,6 +175,19 @@ const PlaceView = () => {
     async (id: string) => {
       setLoading(true);
       try {
+        const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
+
+        if (!userResult) {
+          setError(true);
+          return;
+        }
+
+        // Calibrate Bin search index
+        setLeftBound(0);
+        setRightBound(userResult.data[0].reviews.length - 1);
+
+        setFullUser(userResult.data[0]);
+
         const result = await fetchAPI(`/(api)/(places)/${id}`);
         if (result.data.length === 0) {
           // Fetch detailed place info from Google API
@@ -171,7 +258,7 @@ const PlaceView = () => {
 
   if (loading) {
     return (
-      <View>
+      <View className="flex-1 justify-center items-center">
         <ActivityIndicator />
       </View>
     );
@@ -259,7 +346,7 @@ const PlaceView = () => {
               </View>
             </View>
           </View>
-          <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg  bg-background md:shadow-xl my-3">
+          <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-background md:shadow-xl my-3">
             {(currentPlace?.reviews?.length ?? 0) > 1 ? (
               <Marquee>
                 <View className="flex flex-row mx-2">
@@ -270,9 +357,13 @@ const PlaceView = () => {
               </Marquee>
             ) : (
               <View className="flex flex-row mx-2">
-                {currentPlace?.reviews.map((review) => (
-                  <ReviewCard key={review.username} {...review} />
-                ))}
+                {currentPlace?.reviews?.length ? (
+                  currentPlace.reviews.map((review) => (
+                    <ReviewCard key={review.username} {...review} />
+                  ))
+                ) : (
+                  <Text>No reviews available</Text>
+                )}
               </View>
             )}
           </View>
@@ -282,6 +373,98 @@ const PlaceView = () => {
           icon="plus"
           onPress={() => setReviewModal(true)}
         />
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={reviewModal}
+          onRequestClose={() => setReviewModal(false)}
+        >
+          <View className="flex-1 bg-black bg-opacity-50 items-center justify-center">
+            <View className="bg-white rounded-lg shadow-lg p-6 w-full">
+              <Text className="text-xl text-center font-semibold mb-4 text-gray-900">
+                How was it?
+              </Text>
+
+              <View className="flex-row justify-center space-x-8 mb-6">
+                {circles.map((circle, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    className="h-12 w-12 rounded-full border-2 flex items-center justify-center"
+                    style={{ backgroundColor: circle.color }}
+                    onPress={() => toggleRating(index)}
+                  >
+                    {selectedRating === index && (
+                      <Text className="text-white text-lg font-bold">✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {selectedRating !== -1 && leftBound <= rightBound && (
+              <View className="bg-white rounded-lg shadow-lg p-6 w-full mt-2  flex-col justify-center items-center">
+                <Text className="text-xl text-center font-semibold mb-4 text-gray-900">
+                  Which place did you enjoy more?
+                </Text>
+                <View className="flex-row justify-evenly items-center space-x-7 ">
+                  <TouchableOpacity
+                    onPress={() => calibrateSearch(true, false, false)}
+                    className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
+                  >
+                    <Text className="font-medium">{currentPlace?.name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => calibrateSearch(false, false, true)}
+                    className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
+                  >
+                    <Text className="font-medium">
+                      {
+                        fullUser?.reviews[
+                          Math.floor((leftBound + rightBound) / 2)
+                        ].name
+                      }
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {selectedRating !== -1 && (
+              <View className="bg-white rounded-lg shadow-lg p-4 w-full mt-2">
+                <TextInput
+                  className="border border-gray-950 min-h-[150px] rounded-lg p-3 w-full text-gray-800"
+                  placeholder="Share your thoughts here..."
+                  multiline
+                  numberOfLines={4}
+                  value={text}
+                  onChangeText={(newText) => setText(newText)}
+                />
+              </View>
+            )}
+
+            <View className="flex-row justify-center mt-2">
+              <CustomButton
+                title="Review"
+                onPress={() => {
+                  handleSubmit();
+                }}
+                className="w-[120px] mx-2"
+              />
+              <CustomButton
+                title="Cancel"
+                onPress={() => {
+                  setReviewModal(false);
+                  setSelectedRating(-1);
+                  setLosses(0);
+                  setWins(0);
+                  setDraws(0);
+                  setText("");
+                }}
+                className="w-[120px] mx-2"
+              />
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </ScrollView>
   );

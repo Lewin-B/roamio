@@ -24,7 +24,7 @@ export async function GET(request: Request, { id }: { id: string }) {
         LEFT JOIN
             reviews ON places.id = reviews.place_id
         WHERE 
-            places.id = 9
+            places.place_id = ${id}
         GROUP BY
             places.id;
       `;
