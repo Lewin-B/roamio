@@ -91,8 +91,8 @@ const SignUp = () => {
         </View>
         <View className="p-5">
           <InputField
-            label="Name"
-            placeholder="Enter name"
+            label="Username"
+            placeholder="Enter Username"
             icon={icons.person}
             value={form.name}
             onChangeText={(value) => setForm({ ...form, name: value })}

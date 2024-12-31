@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     const response = await sql`
       INSERT INTO users (
-        name, 
+        username, 
         email, 
         clerk_id
       ) 
