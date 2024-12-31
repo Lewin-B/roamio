@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { FAB } from "react-native-paper";
+import Carousel from "react-native-reanimated-carousel";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { Place } from "@/components/Map";
@@ -385,13 +386,15 @@ const PlaceView = () => {
           </View>
           <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-background md:shadow-xl my-3">
             {(currentPlace?.reviews?.length ?? 0) > 1 ? (
-              <Marquee>
-                <View className="flex flex-row mx-2">
-                  {currentPlace?.reviews.map((review) => (
-                    <ReviewCard key={review.username} {...review} />
-                  ))}
-                </View>
-              </Marquee>
+              <Carousel
+                height={150}
+                width={300}
+                loop
+                data={currentPlace?.reviews || []}
+                renderItem={({ item }: { item: Review }) => {
+                  return <ReviewCard key={item.username} {...item} />;
+                }}
+              />
             ) : (
               <View className="flex flex-row mx-2">
                 {currentPlace?.reviews?.length ? (
