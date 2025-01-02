@@ -1,4 +1,3 @@
-import { Marquee } from "@animatereactnative/marquee";
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
@@ -66,9 +65,9 @@ interface Match {
 }
 
 const circles = [
-  { color: "#1ce125", description: "I liked it!" },
-  { color: "yellow", description: "It was mid" },
-  { color: "red", description: "It didn't like it" },
+  { color: "#4CAF50", description: "I liked it!" }, // Vibrant green
+  { color: "#FFC107", description: "It was okay" }, // Warm amber
+  { color: "#F44336", description: "I didn't like it" }, // Bright red
 ];
 
 const googlePlacesApiKey = process.env.EXPO_PUBLIC_PLACES_API_KEY ?? "";
@@ -194,6 +193,7 @@ const PlaceView = () => {
     };
 
     console.log("info: ", apiInfo);
+    alert("Review Submitted!");
   };
 
   const id = String(preId ?? "");
@@ -202,6 +202,7 @@ const PlaceView = () => {
     async (id: string) => {
       setLoading(true);
       try {
+        console.log("user: ", user);
         const result = await fetchAPI(`/(api)/(places)/${id}`);
         if (result.data.length === 0) {
           // Fetch detailed place info from Google API
@@ -236,6 +237,20 @@ const PlaceView = () => {
 
           console.log("Inserted place into the database: ", insertResult);
           setCurrentPlace(insertResult.data);
+
+          const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
+
+          if (!userResult) {
+            setError(true);
+            return;
+          }
+
+          // Calibrate Bin search index
+          setLeftBound(0);
+          setRightBound(userResult.data[0].reviews.length);
+
+          // Set full user with filtered reviews
+          setFullUser(userResult.data[0]);
         } else {
           console.log("Place found in database: ", result.data);
           setCurrentPlace(result.data[0]);
@@ -285,11 +300,11 @@ const PlaceView = () => {
     if (!currentPlace?.rating) {
       setRatingColor("white");
     } else if (Number(currentPlace?.rating) <= 3.0) {
-      setRatingColor("red");
+      setRatingColor("#FFC107");
     } else if (Number(currentPlace?.rating) >= 7.0) {
-      setRatingColor("#1ce125");
+      setRatingColor("#4CAF50");
     } else {
-      setRatingColor("yellow");
+      setRatingColor("#FFC107");
     }
     console.log("Rating Color: ", ratingColor);
   }, [currentPlace?.rating, ratingColor, setRatingColor]);
@@ -409,7 +424,7 @@ const PlaceView = () => {
           </View>
         </View>
         <FAB
-          className="absolute bottom-0 bg-gray-950/[.01] border-gray-950/[.1] rounded-full right-4"
+          className="absolute bottom-10 bg-gray-950/[.01] border-gray-950/[.1] rounded-full right-4"
           icon="plus"
           onPress={() => setReviewModal(true)}
         />
@@ -441,7 +456,7 @@ const PlaceView = () => {
               </View>
             </View>
 
-            {selectedRating !== -1 && leftBound <= rightBound && (
+            {selectedRating !== -1 && leftBound < rightBound && (
               <View className="bg-white rounded-lg shadow-lg p-6 w-full mt-2  flex-col justify-center items-center">
                 <Text className="text-xl text-center font-semibold mb-4 text-gray-900">
                   Which place did you enjoy more?
@@ -522,7 +537,6 @@ const PlaceView = () => {
                   setLeftBound(0);
                   setRightBound(fullUser?.reviews?.length || 0 - 1);
                   setText("");
-                  alert("Review Submitted!");
                 }}
                 className="w-[120px] mx-2"
               />
