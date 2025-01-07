@@ -41,8 +41,9 @@ interface NeonPlace {
 }
 
 interface Review {
-  userId: number;
-  placeId: number;
+  id: number;
+  user_id: number;
+  place_id: number;
   username: string;
   text_review: string;
   rating: number;
@@ -191,6 +192,7 @@ const PlaceView = () => {
       matches: newMatches,
       text_review: text,
       username: fullUser?.name,
+      review_id: placeReview ? placeReview.id : null,
     };
 
     console.log("Host: ", process.env.EXPO_PUBLIC_BACKEND_URL);
@@ -290,17 +292,15 @@ const PlaceView = () => {
           }
 
           const foundReview = userResult.data[0].reviews.find(
-            (review: Review) => review.placeId === result.data[0]?.id
+            (review: Review) => review.place_id === result.data[0]?.id
           );
 
           setPlaceReview(foundReview);
 
           // filter reviews
           const filteredReviews = userResult.data[0].reviews.filter(
-            (review: Review) => review.placeId !== result.data[0]?.id
+            (review: Review) => review.place_id !== result.data[0]?.id
           );
-
-          console.log("filtered reviews: ", filteredReviews);
 
           // Calibrate Bin search index
           setLeftBound(0);
@@ -433,7 +433,7 @@ const PlaceView = () => {
               <Text className="text-md font-medium">Roamio Ranking</Text>
               <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 bg-gray-950/[.01]">
                 <Text className="text-black text-2xl font-JakartaBold">
-                  # {currentPlace?.ranking}
+                  # {currentPlace?.ranking ? currentPlace?.ranking : "N/A"}
                 </Text>
               </View>
             </View>

@@ -9,16 +9,9 @@ export async function GET(request: Request, { id }: { id: string }) {
     const response = await sql`
           SELECT 
     places.*,
-    'reviews', json_agg(
-        json_build_object(
-            'placeId', reviews.place_id,
-            'userId', reviews.user_id,
-            'image', reviews.image,
-            'text_review', reviews.text_review,
-            'username', reviews.username,
-            'rating', reviews.rating
-        )
-      ) AS reviews
+    'reviews', 
+    json_agg(to_jsonb(reviews)) 
+        AS reviews
         FROM 
             places
         LEFT JOIN
