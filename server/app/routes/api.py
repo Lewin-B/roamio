@@ -1,3 +1,5 @@
+import asyncio
+from typing import Any, Dict
 from quart import Blueprint, request, jsonify
 from app.services.user_service import UserService
 from app.db import NeonDB
@@ -7,7 +9,7 @@ api_bp = Blueprint('api', __name__)
 rating_service = RatingService()
 
 @api_bp.route('/process-matches', methods=['POST'])
-async def process_matches():
+async def process_matches():  # Remove self and data parameters
     try:
         data = await request.get_json()
         matches = data.get('matches', [])
@@ -15,14 +17,42 @@ async def process_matches():
         if not matches:
             return {'error': 'No matches provided'}, 400
 
-        updated_ratings = await rating_service.process_matches(matches)
+        # Validate required fields for review
+        if data.get('place_id') and not data.get('user_id'):
+            return {'error': 'user_id is required when submitting a review'}, 400
         
+        if data.get('place_id') and not data.get('text_review'):
+            return {'error': 'text_review is required when submitting a review'}, 400
+
+        # Process matches and create review
+        updated_ratings = await rating_service.process_matches(data)
+        
+        # Get updated place details
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            places = await conn.fetch("""
+                SELECT id, name, rating, elo_rating, ranking 
+                FROM places 
+                WHERE id = ANY($1::int[])
+                """, 
+                list(updated_ratings.keys())
+            )
+            
+            updated_places = [{
+                'id': place['id'],
+                'name': place['name'],
+                'rating': float(place['rating']),
+                'elo_rating': float(place['elo_rating']),
+                'ranking': place['ranking']
+            } for place in places]
+
         return jsonify({
             'success': True,
-            'updated_ratings': updated_ratings
+            'updated_places': updated_places
         })
 
     except Exception as e:
+        print(f"Error in process_matches: {str(e)}")  # For debugging
         return {'error': str(e)}, 500
 
 @api_bp.route('/rankings', methods=['GET'])
