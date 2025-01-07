@@ -48,15 +48,16 @@ class RatingService:
                     float(avg_rating), place_id
                 )
 
-    async def create_review(
+    async def create_or_update_review(
         self, 
         user_id: int, 
         place_id: int, 
-        text_review: str,
         elo_rating: float,
-        username: str = None
+        text_review: str = None,
+        username: str = None,
+        review_id: int = None
     ) -> None:
-        """Create a review entry with ratings"""
+        """Create or update a review entry"""
         normalized_rating = self.elo_system.normalize_rating(
             elo_rating, 
             min_rating=0, 
@@ -79,36 +80,41 @@ class RatingService:
                     user_id
                 )
             
-            # Create review with ratings
-            await conn.execute(
-                '''
-                INSERT INTO reviews 
-                (text_review, user_id, place_id, place_name, rating, elo_rating, username)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ''',
-                text_review, user_id, place_id, place_name, normalized_rating, 
-                elo_rating, username
-            )
-            
-            # Update the place's average rating
-            await self.update_place_avg_rating(place_id)
+            if review_id:
+                # Update existing review
+                await conn.execute("""
+                    UPDATE reviews 
+                    SET text_review = COALESCE($1, text_review),
+                        rating = $2,
+                        elo_rating = $3,
+                        username = $4
+                    WHERE id = $5
+                """, text_review, normalized_rating, elo_rating, username, review_id)
+            else:
+                # Create new review
+                await conn.execute("""
+                    INSERT INTO reviews 
+                    (text_review, user_id, place_id, place_name, rating, elo_rating, username)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                """, text_review, user_id, place_id, place_name, normalized_rating, 
+                    elo_rating, username)
 
-    async def update_rankings(self) -> None:
-        """Update rankings based on average ratings"""
-        pool = await NeonDB.get_pool()
-        async with pool.acquire() as conn:
-            await conn.execute("""
-                WITH ranked AS (
-                    SELECT 
-                        id,
-                        ROW_NUMBER() OVER (ORDER BY avg_rating DESC) as new_rank
-                    FROM places
-                )
-                UPDATE places
-                SET ranking = ranked.new_rank::text
-                FROM ranked
-                WHERE places.id = ranked.id
-            """)
+        async def update_rankings(self) -> None:
+            """Update rankings based on average ratings"""
+            pool = await NeonDB.get_pool()
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    WITH ranked AS (
+                        SELECT 
+                            id,
+                            ROW_NUMBER() OVER (ORDER BY avg_rating DESC) as new_rank
+                        FROM places
+                    )
+                    UPDATE places
+                    SET ranking = ranked.new_rank::text
+                    FROM ranked
+                    WHERE places.id = ranked.id
+                """)
 
     async def process_matches(self, data: Dict[str, Any]) -> Dict[str, float]:
         """Process matches and create review"""
@@ -180,14 +186,15 @@ class RatingService:
                 updated_ratings[winner_id] = new_winner
                 updated_ratings[loser_id] = new_loser
 
-        # Create review if this is user's review
-        if user_id and place_id and text_review:
-            await self.create_review(
+        # In process_matches method, replace the create_review call with:
+        if user_id and place_id:
+            await self.create_or_update_review(
                 user_id=user_id,
                 place_id=place_id,
-                text_review=text_review,
+                text_review=text_review,  # Can be None
                 elo_rating=updated_ratings.get(place_id, 1000),
-                username=username
+                username=username,
+                review_id=data.get('review_id')  # Will be None for new reviews
             )
         else:
             # If no review but ratings changed, update affected places
