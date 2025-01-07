@@ -36,7 +36,7 @@ export async function POST(request: Request) {
             types
         ) VALUES (
             ${place_id},
-            ${rating ?? null},
+            ${rating ?? 1000},
             ${location},
             ${image},
             ${name ?? ""},
