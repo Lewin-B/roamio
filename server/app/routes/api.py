@@ -12,6 +12,7 @@ rating_service = RatingService()
 async def process_matches():
     try:
         data = await request.get_json()
+        print(data)
         matches = data.get('matches', [])
         
         if not matches:

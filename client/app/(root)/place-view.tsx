@@ -1,6 +1,7 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
+import { Heart, MapPin, Star, Share2 } from "lucide-react-native";
 import { useEffect, useState, useCallback } from "react";
 import React from "react";
 import {
@@ -48,12 +49,12 @@ interface Review {
   text_review: string;
   rating: number;
   image: string;
-  name: string;
+  place_name: string;
 }
 
 interface User {
   id: number;
-  name: string;
+  username: string;
   email: string;
   clerk_id: string;
   reviews: Review[];
@@ -128,6 +129,9 @@ const PlaceView = () => {
   const { user } = useUser();
 
   const toggleRating = (index: number) => {
+    console.log("Check bounds: ", leftBound, rightBound);
+    console.log("Matches: ", matches);
+    console.log("Full user: ", fullUser);
     setSelectedRating(index);
   };
 
@@ -191,11 +195,11 @@ const PlaceView = () => {
       place_id: currentPlace?.id,
       matches: newMatches,
       text_review: text,
-      username: fullUser?.name,
+      username: fullUser?.username,
       review_id: placeReview ? placeReview.id : null,
     };
 
-    console.log("Host: ", process.env.EXPO_PUBLIC_BACKEND_URL);
+    console.log("Api Info: ", apiInfo);
 
     try {
       const rawResponse = await fetch(
@@ -302,6 +306,8 @@ const PlaceView = () => {
             (review: Review) => review.place_id !== result.data[0]?.id
           );
 
+          console.log("filteredReviews: ", filteredReviews.length);
+
           // Calibrate Bin search index
           setLeftBound(0);
           setRightBound(filteredReviews.length - 1);
@@ -330,6 +336,9 @@ const PlaceView = () => {
 
   useEffect(() => {
     console.log("Rating: ", currentPlace?.avg_rating);
+    console.log("Reviews Check: ", fullUser);
+    console.log("Left Bound: ", leftBound);
+    console.log("Right Bound: ", rightBound);
     if (!currentPlace?.avg_rating) {
       setRatingColor("white");
     } else if (Number(currentPlace?.avg_rating) <= 3.0) {
@@ -358,239 +367,299 @@ const PlaceView = () => {
   }
 
   return (
-    <ScrollView>
+    <ScrollView className="bg-white">
       <SafeAreaView>
-        <View className="bg-white/10 px-3 py-2 flex flex-row justify-between fixed">
-          <TouchableOpacity
-            onPress={() => {
-              router.back();
-            }}
-          >
-            <Image source={icons.backArrow} />
-          </TouchableOpacity>
-          <Text className="text-2xl font-JakartaExtraBold pt-2">Roamio</Text>
-          <TouchableOpacity
-            onPress={() => {
-              router.push("/(root)/(tabs)/profile");
-            }}
-          >
-            <Image className="h-[45px]" source={icons.person} />
-          </TouchableOpacity>
-        </View>
-        <View>
-          <ImageBackground
-            source={{ uri: currentPlace?.image }}
-            className="flex justify-end h-[300px]"
-          >
-            <View className="flex flex-row justify-between items-center">
-              <Text className="text-3xl font-JakartaBold text-white mb-5">
+        {/* Hero Section with Parallax Image */}
+        <ImageBackground
+          source={{ uri: currentPlace?.image }}
+          className="h-[450px]"
+        >
+          <View className="flex-1 bg-gradient-to-b from-black/40 via-transparent to-black/70">
+            {/* Header */}
+            <View className="px-4 py-3 flex-row items-center justify-between">
+              <TouchableOpacity
+                onPress={() => router.back()}
+                className="p-2 rounded-full bg-black/30 backdrop-blur"
+              >
+                <Image
+                  source={icons.backArrow}
+                  className="w-6 h-6 tint-white"
+                />
+              </TouchableOpacity>
+              <View className="flex-row gap-3">
+                <TouchableOpacity className="p-2 rounded-full bg-black/30 backdrop-blur">
+                  <Share2 size={24} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity className="p-2 rounded-full bg-black/30 backdrop-blur">
+                  <Heart size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Title Section - Bottom of Hero */}
+            <View className="mt-auto p-4">
+              <Text className="text-4xl font-JakartaBold text-white/90 mb-2 shadow-lg">
                 {currentPlace?.name}
               </Text>
-            </View>
-          </ImageBackground>
-        </View>
-        <View className="flex my-3">
-          <View className="flex flex-col justify-evenly items-center">
-            <View className="flex items-center border border-gray-950/[.1] bg-gray-950/[.01] p-2 rounded-lg">
-              <View className="flex-row justify-start">
-                <Text className="text-4xl font-medium">
+              <View className="flex-row items-center gap-2 mb-2">
+                <MapPin size={16} color="white" />
+                <Text className="text-white/90 font-JakartaMedium">
                   {currentPlace?.formatted_address}
                 </Text>
               </View>
-              <Text className="text-md font-medium text-black">
-                {currentPlace?.types}
-              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {currentPlace?.types?.split(" · ").map((type) => (
+                  <View
+                    key={type}
+                    className="bg-white/20 rounded-full px-3 py-1"
+                  >
+                    <Text className="text-white/90 text-sm font-JakartaMedium">
+                      {type}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-          <View className="flex flex-row justify-evenly">
-            <View className="flex flex-col justify-center items-center">
-              <Text className="text-md font-medium">Roamio Rating</Text>
-              <View
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-3"
-                style={{ backgroundColor: ratingColor }}
-              >
-                <Text className="text-white text-2xl font-JakartaBold">
+        </ImageBackground>
+
+        {/* Ratings Cards */}
+        <View className="px-4 -mt-2">
+          <View className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+            <View className="flex-row justify-between mb-4">
+              <View className="items-center flex-1">
+                <Text className="text-3xl font-JakartaBold text-gray-900 mb-1">
                   {currentPlace?.avg_rating
                     ? Math.round(currentPlace?.avg_rating * 10) / 10
                     : "N/A"}
                 </Text>
+                <Text className="text-sm font-JakartaMedium text-gray-500">
+                  Roamio Rating
+                </Text>
               </View>
-            </View>
-            <View className="flex flex-col justify-center items-center">
-              <Text className="text-md font-medium">Roamio Rating</Text>
-              <View
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-3"
-                style={{ backgroundColor: ratingColor }}
-              >
-                <Text className="text-white text-2xl font-JakartaBold">
-                  {placeReview
-                    ? Math.round(placeReview.rating * 10) / 10
-                    : "N/A"}
+              <View className="w-px bg-gray-200" />
+              <View className="items-center flex-1">
+                <View className="flex-row items-center gap-1">
+                  <Star size={20} color="#FFB800" fill="#FFB800" />
+                  <Text className="text-3xl font-JakartaBold text-gray-900">
+                    {placeReview && placeReview.rating !== 0
+                      ? Math.round(placeReview.rating * 10) / 10
+                      : "--"}
+                  </Text>
+                </View>
+                <Text className="text-sm font-JakartaMedium text-gray-500">
+                  Your Rating
+                </Text>
+              </View>
+              <View className="w-px bg-gray-200" />
+              <View className="items-center flex-1">
+                <Text className="text-3xl font-JakartaBold text-gray-900 mb-1">
+                  #{currentPlace?.ranking || "--"}
+                </Text>
+                <Text className="text-sm font-JakartaMedium text-gray-500">
+                  Ranking
                 </Text>
               </View>
             </View>
-            <View className="flex flex-col justify-center items-center">
-              <Text className="text-md font-medium">Roamio Ranking</Text>
-              <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 bg-gray-950/[.01]">
-                <Text className="text-black text-2xl font-JakartaBold">
-                  # {currentPlace?.ranking ? currentPlace?.ranking : "N/A"}
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View className="relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-background md:shadow-xl my-3">
-            {(currentPlace?.reviews?.length ?? 0) > 1 ? (
-              <Carousel
-                height={150}
-                width={300}
-                loop
-                data={currentPlace?.reviews || []}
-                renderItem={({ item }: { item: Review }) => {
-                  return <ReviewCard key={item.username} {...item} />;
-                }}
-              />
-            ) : (
-              <View className="flex flex-row mx-2">
-                {currentPlace?.reviews?.length ? (
-                  currentPlace.reviews.map((review) => (
-                    <ReviewCard key={review.username} {...review} />
-                  ))
-                ) : (
-                  <Text>No reviews available</Text>
-                )}
-              </View>
-            )}
           </View>
         </View>
+
+        {/* Reviews Section */}
+        <View className="px-4 mb-6">
+          <View className="flex-row justify-center items-center mb-4">
+            <Text className="text-xl font-JakartaBold text-gray-900">
+              Reviews
+            </Text>
+          </View>
+
+          {(currentPlace?.reviews?.length ?? 0) > 1 ? (
+            <Carousel
+              height={200}
+              width={320}
+              loop
+              autoPlay
+              data={currentPlace?.reviews || []}
+              renderItem={({ item }) => (
+                <View className="mr-4">
+                  <ReviewCard key={item.username} {...item} />
+                </View>
+              )}
+            />
+          ) : currentPlace?.reviews?.length === 1 ? (
+            <View className="px-1 flex items-center justify-center">
+              <ReviewCard {...currentPlace.reviews[0]} />
+            </View>
+          ) : (
+            <View className="bg-gray-50 rounded-xl p-6 items-center">
+              <Text className="text-gray-500 text-center mb-2">
+                No reviews yet
+              </Text>
+              <Text className="text-sm text-gray-400 text-center">
+                Be the first to share your experience!
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Add Review FAB */}
         <FAB
-          className="absolute bottom-10 bg-gray-950/[.01] border-gray-950/[.1] rounded-full right-4"
+          className="absolute bottom-8 right-6"
           icon="plus"
+          color="white"
+          style={{ backgroundColor: "#111827" }}
           onPress={() => setReviewModal(true)}
         />
+
+        {/* Review Modal */}
         <Modal
-          animationType="fade"
+          animationType="slide"
           transparent={true}
           visible={reviewModal}
           onRequestClose={() => setReviewModal(false)}
         >
-          <View className="flex-1 bg-black bg-opacity-50 items-center justify-center">
-            <View className="bg-white rounded-lg shadow-lg p-6 w-full">
-              <Text className="text-xl text-center font-semibold mb-4 text-gray-900">
-                How was it?
-              </Text>
+          <View className="flex-1 bg-black/50">
+            <View className="mt-auto bg-white rounded-t-3xl">
+              <View className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-4 mb-2" />
 
-              <View className="flex-row justify-center space-x-8 mb-6">
-                {circles.map((circle, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    className="h-12 w-12 rounded-full border-2 flex items-center justify-center"
-                    style={{ backgroundColor: circle.color }}
-                    onPress={() => toggleRating(index)}
-                  >
-                    {selectedRating === index && (
-                      <Text className="text-white text-lg font-bold">✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {selectedRating !== -1 && leftBound < rightBound && (
-              <View className="bg-white rounded-lg shadow-lg p-6 w-full mt-2  flex-col justify-center items-center">
-                <Text className="text-xl text-center font-semibold mb-4 text-gray-900">
-                  Which place did you enjoy more?
+              <View className="p-6">
+                <Text className="text-2xl text-center font-JakartaBold mb-6">
+                  Rate Your Experience
                 </Text>
-                <View className="flex-row justify-evenly items-center space-x-7 ">
+
+                <View className="flex-row justify-center space-x-4 mb-8">
+                  {circles.map((circle, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => toggleRating(index)}
+                      className="h-16 w-16 rounded-2xl items-center justify-center shadow-sm"
+                      style={{
+                        backgroundColor:
+                          selectedRating === index ? circle.color : "white",
+                        borderWidth: 2,
+                        borderColor: circle.color,
+                      }}
+                    >
+                      <Text
+                        className={`text-2xl font-bold ${selectedRating === index ? "text-white" : "text-gray-400"}`}
+                      >
+                        {index + 1}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {selectedRating !== -1 && leftBound <= rightBound && (
+                  <View className="bg-gray-50 rounded-2xl p-4 mb-6">
+                    <Text className="text-lg text-center font-JakartaBold mb-4">
+                      Quick Compare
+                    </Text>
+                    <View className="flex-row justify-between">
+                      <TouchableOpacity
+                        onPress={() =>
+                          calibrateSearch(
+                            "win",
+                            currentPlace?.id || null,
+                            fullUser?.reviews[
+                              Math.floor((leftBound + rightBound) / 2)
+                            ].place_id || null
+                          )
+                        }
+                        className="w-[45%] p-4 rounded-xl bg-white shadow-sm"
+                      >
+                        <Text className="font-JakartaMedium text-center">
+                          {currentPlace?.name}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() =>
+                          calibrateSearch(
+                            "loss",
+                            currentPlace?.id || null,
+                            fullUser?.reviews[
+                              Math.floor((leftBound + rightBound) / 2)
+                            ].place_id || null
+                          )
+                        }
+                        className="w-[45%] p-4 rounded-xl bg-white shadow-sm"
+                      >
+                        <Text className="font-JakartaMedium text-center">
+                          {
+                            fullUser?.reviews[
+                              Math.floor((leftBound + rightBound) / 2)
+                            ].place_name
+                          }
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <CustomButton
+                      className="mt-4"
+                      title="Equal"
+                      onPress={() =>
+                        calibrateSearch(
+                          "draw",
+                          currentPlace?.id || null,
+                          fullUser?.reviews[
+                            Math.floor((leftBound + rightBound) / 2)
+                          ].place_id || null
+                        )
+                      }
+                    />
+                  </View>
+                )}
+
+                {selectedRating !== -1 && (
+                  <TextInput
+                    className="bg-gray-50 rounded-xl p-4 min-h-[120px] text-gray-800 mb-6"
+                    placeholder="What made this place special? (optional)"
+                    multiline
+                    numberOfLines={4}
+                    value={text}
+                    onChangeText={setText}
+                  />
+                )}
+
+                <View className="flex-row justify-between">
                   <TouchableOpacity
-                    onPress={() =>
-                      calibrateSearch(
-                        "win",
-                        currentPlace?.id || null,
-                        fullUser?.reviews[
-                          Math.floor((leftBound + rightBound) / 2)
-                        ].placeId || null
-                      )
-                    }
-                    className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
+                    onPress={() => {
+                      setReviewModal(false);
+                      setSelectedRating(-1);
+                      setMatches([]);
+                      setLeftBound(0);
+                      setRightBound(
+                        fullUser?.reviews?.length
+                          ? fullUser?.reviews?.length - 1
+                          : 0
+                      );
+                      setText("");
+                    }}
+                    className="w-[48%] py-3 rounded-xl bg-gray-100"
                   >
-                    <Text className="font-medium">{currentPlace?.name}</Text>
+                    <Text className="text-center font-JakartaMedium text-gray-900">
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() =>
-                      calibrateSearch(
-                        "loss",
-                        currentPlace?.id || null,
-                        fullUser?.reviews[
-                          Math.floor((leftBound + rightBound) / 2)
-                        ].placeId || null
-                      )
-                    }
-                    className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
+                    onPress={() => {
+                      handleSubmit();
+                      setReviewModal(false);
+                      setSelectedRating(-1);
+                      setMatches([]);
+                      setLeftBound(0);
+                      setRightBound(
+                        fullUser?.reviews?.length
+                          ? fullUser?.reviews?.length - 1
+                          : 0
+                      );
+                      setText("");
+                    }}
+                    className="w-[48%] py-3 rounded-xl bg-gray-900"
                   >
-                    <Text className="font-medium">
-                      {
-                        fullUser?.reviews[
-                          Math.floor((leftBound + rightBound) / 2)
-                        ].name
-                      }
+                    <Text className="text-center font-JakartaMedium text-white">
+                      Post Review
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <CustomButton
-                  className="mt-3 w-[150px]"
-                  title="Draw"
-                  onPress={() =>
-                    calibrateSearch(
-                      "draw",
-                      currentPlace?.id || null,
-                      fullUser?.reviews[
-                        Math.floor((leftBound + rightBound) / 2)
-                      ].placeId || null
-                    )
-                  }
-                />
               </View>
-            )}
-
-            {selectedRating !== -1 && (
-              <View className="bg-white rounded-lg shadow-lg p-4 w-full mt-2">
-                <TextInput
-                  className="border border-gray-950 min-h-[150px] rounded-lg p-3 w-full text-gray-800"
-                  placeholder="Share your thoughts here..."
-                  multiline
-                  numberOfLines={4}
-                  value={text}
-                  onChangeText={(newText) => setText(newText)}
-                />
-              </View>
-            )}
-
-            <View className="flex-row justify-center mt-2">
-              <CustomButton
-                title="Review"
-                onPress={() => {
-                  handleSubmit();
-                  setReviewModal(false);
-                  setSelectedRating(-1);
-                  setMatches([]);
-                  setLeftBound(0);
-                  setRightBound(fullUser?.reviews?.length || 0 - 1);
-                  setText("");
-                }}
-                className="w-[120px] mx-2"
-              />
-              <CustomButton
-                title="Cancel"
-                onPress={() => {
-                  setReviewModal(false);
-                  setSelectedRating(-1);
-                  setMatches([]);
-                  setLeftBound(0);
-                  setRightBound(fullUser?.reviews?.length || 0 - 1);
-                  setText("");
-                }}
-                className="w-[120px] mx-2"
-              />
             </View>
           </View>
         </Modal>
