@@ -22,7 +22,8 @@ async def process_matches():
             return {'error': 'user_id is required when submitting a review'}, 400
         
         if data.get('place_id') and not data.get('text_review'):
-            return {'error': 'text_review is required when submitting a review'}, 400
+            data["text_review"] = ""
+            # return {'error': 'text_review is required when submitting a review'}, 400
 
         # Process matches and create review
         updated_places = await rating_service.process_matches(data)
