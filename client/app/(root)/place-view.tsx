@@ -59,9 +59,9 @@ interface User {
 }
 
 interface Match {
-  winner: string;
-  loser: string;
-  tie: string[];
+  winner: number | null;
+  loser: number | null;
+  tie: (number | null)[];
 }
 
 const circles = [
@@ -133,11 +133,11 @@ const PlaceView = () => {
 
   const calibrateSearch = (
     result: string,
-    teamOne: string,
-    teamTwo: string
+    teamOne: number | null,
+    teamTwo: number | null
   ) => {
     const mid = Math.floor(leftBound + rightBound) / 2;
-    let match: Match = { winner: "", loser: "", tie: [] };
+    let match: Match = { winner: null, loser: null, tie: [] };
     if (result === "win") {
       setLeftBound(mid + 1);
       match = {
@@ -155,8 +155,8 @@ const PlaceView = () => {
     } else {
       setLeftBound(mid + 1);
       match = {
-        winner: "",
-        loser: "",
+        winner: -1,
+        loser: -1,
         tie: [teamOne, teamTwo],
       };
     }
@@ -169,17 +169,17 @@ const PlaceView = () => {
   const handleSubmit = () => {
     const newMatches = matches;
     if (selectedRating === 0) {
-      const match = { winner: currentPlace?.name || "", loser: "", tie: [] };
+      const match = { winner: currentPlace?.id || null, loser: null, tie: [] };
       newMatches.push(match);
     } else if (selectedRating === 1) {
       const match = {
-        winner: "",
-        loser: "",
-        tie: currentPlace?.name ? [currentPlace.name] : [""],
+        winner: null,
+        loser: null,
+        tie: currentPlace?.id ? [currentPlace.id || null] : [],
       };
       newMatches.push(match);
     } else if (selectedRating === 2) {
-      const match = { winner: "", loser: currentPlace?.name || "", tie: [] };
+      const match = { winner: null, loser: currentPlace?.id || null, tie: [] };
       newMatches.push(match);
     } else {
       alert("Please give a rating to the place");
@@ -466,10 +466,10 @@ const PlaceView = () => {
                     onPress={() =>
                       calibrateSearch(
                         "win",
-                        currentPlace?.name || "",
+                        currentPlace?.id || null,
                         fullUser?.reviews[
                           Math.floor((leftBound + rightBound) / 2)
-                        ].name || ""
+                        ].placeId || null
                       )
                     }
                     className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
@@ -480,10 +480,10 @@ const PlaceView = () => {
                     onPress={() =>
                       calibrateSearch(
                         "loss",
-                        currentPlace?.name || "",
+                        currentPlace?.id || null,
                         fullUser?.reviews[
                           Math.floor((leftBound + rightBound) / 2)
-                        ].name || ""
+                        ].placeId || null
                       )
                     }
                     className="h-[125px] w-[125px] border p-4 rounded-md bg-gray-950/[.01] flex justify-center"
@@ -503,10 +503,10 @@ const PlaceView = () => {
                   onPress={() =>
                     calibrateSearch(
                       "draw",
-                      currentPlace?.name || "",
+                      currentPlace?.id || null,
                       fullUser?.reviews[
                         Math.floor((leftBound + rightBound) / 2)
-                      ].name || ""
+                      ].placeId || null
                     )
                   }
                 />
