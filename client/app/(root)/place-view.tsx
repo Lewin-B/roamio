@@ -410,7 +410,9 @@ const PlaceView = () => {
                 style={{ backgroundColor: ratingColor }}
               >
                 <Text className="text-white text-2xl font-JakartaBold">
-                  {Math.round((currentPlace?.avg_rating ?? 0) * 10) / 10}
+                  {currentPlace?.avg_rating
+                    ? Math.round(currentPlace?.avg_rating * 10) / 10
+                    : "N/A"}
                 </Text>
               </View>
             </View>
