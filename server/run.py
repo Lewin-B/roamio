@@ -6,7 +6,7 @@ app = create_app()
 
 async def main():
     config = hypercorn.Config()
-    config.bind = ["0.0.0.0:5000"]
+    config.bind = ["0.0.0.0:5001"]
     await hypercorn.asyncio.serve(app, config)
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 from quart import Blueprint, request, jsonify
 from app.services.user_service import UserService
-from server.app.db import NeonDB
-from server.app.services.rating_service import RatingService
+from app.db import NeonDB
+from app.services.rating_service import RatingService
 
 api_bp = Blueprint('api', __name__)
 rating_service = RatingService()

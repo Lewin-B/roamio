@@ -1,5 +1,9 @@
 from app.db import NeonDB
 from app.models.user import User
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class UserService:
     @staticmethod
@@ -30,5 +34,6 @@ class UserService:
     async def get_all_users():
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch('SELECT * FROM users ORDER BY created_at DESC')
+            rows = await conn.fetch('SELECT * FROM users')
+            logger.info(f"Fetched rows: {rows}")
             return [User.from_db(row) for row in rows]

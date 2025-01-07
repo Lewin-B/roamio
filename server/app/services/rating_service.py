@@ -2,7 +2,7 @@ from app.db import NeonDB
 from typing import List, Dict, Any
 import asyncio
 
-from server.app.utils.elo import DynamicEloSystem
+from app.utils.elo import DynamicEloSystem
 
 class RatingService:
     def __init__(self):
