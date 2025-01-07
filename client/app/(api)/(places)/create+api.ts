@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     if (!place_id || !location || !image) {
       return Response.json(
         { error: "Missing required fields" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const response = await sql`
         INSERT INTO places ( 
             place_id,
-            rating,
+            avg_rating,
             location,
             image,
             name,
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
             types
         ) VALUES (
             ${place_id},
-            ${rating ?? 1000},
+            ${rating ?? 0},
             ${location},
             ${image},
             ${name ?? ""},

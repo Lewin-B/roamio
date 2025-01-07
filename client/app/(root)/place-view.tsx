@@ -30,7 +30,7 @@ interface NeonPlace {
   id: number;
   name: string;
   place_id: string;
-  rating: number;
+  avg_rating: number;
   image: string;
   location: string;
   ranking: number;
@@ -69,8 +69,6 @@ const circles = [
   { color: "#FFC107", description: "It was okay" }, // Warm amber
   { color: "#F44336", description: "I didn't like it" }, // Bright red
 ];
-
-const googlePlacesApiKey = process.env.EXPO_PUBLIC_PLACES_API_KEY ?? "";
 
 const ReviewCard = ({
   image,
@@ -125,6 +123,7 @@ const PlaceView = () => {
   const [rightBound, setRightBound] = useState<number>(0);
   const [text, setText] = useState<string>("");
   const { id: preId } = useLocalSearchParams();
+  const [placeReview, setPlaceReview] = useState<Review | null>(null);
   const { user } = useUser();
 
   const toggleRating = (index: number) => {
@@ -166,7 +165,7 @@ const PlaceView = () => {
     setMatches(newMatches);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newMatches = matches;
     if (selectedRating === 0) {
       const match = { winner: currentPlace?.id || null, loser: null, tie: [] };
@@ -187,13 +186,41 @@ const PlaceView = () => {
     }
 
     const apiInfo = {
-      place_info: currentPlace,
+      user_id: fullUser?.id,
+      place_id: currentPlace?.id,
       matches: newMatches,
       text_review: text,
+      username: fullUser?.name,
     };
 
-    console.log("info: ", apiInfo);
-    alert("Review Submitted!");
+    console.log("Host: ", process.env.EXPO_PUBLIC_BACKEND_URL);
+
+    try {
+      const rawResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL ?? ""}/process-matches`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(apiInfo), // Ensure the body is stringified
+        }
+      );
+
+      const textResponse = await rawResponse.text(); // Read raw text
+      console.log("Raw Backend Response:", textResponse);
+
+      if (!rawResponse.ok) {
+        throw new Error(
+          `HTTP error! status: ${rawResponse.status}, body: ${textResponse}`
+        );
+      }
+
+      const jsonResponse = JSON.parse(textResponse); // Parse JSON manually
+      console.log("Parsed Response:", jsonResponse);
+    } catch (error) {
+      console.error("Error during API call:", error);
+    }
   };
 
   const id = String(preId ?? "");
@@ -206,7 +233,7 @@ const PlaceView = () => {
         const result = await fetchAPI(`/(api)/(places)/${id}`);
         if (result.data.length === 0) {
           // Fetch detailed place info from Google API
-          const url = `https://maps.googleapis.com/maps/api/place/details/json?placeid=${id}&key=${googlePlacesApiKey}`;
+          const url = `https://maps.googleapis.com/maps/api/place/details/json?placeid=${id}&key=${process.env.EXPO_PUBLIC_PLACES_API_KEY ?? ""}`;
           const response = await fetchAPI(url);
           const place = response.result as Place;
           console.log("Place Keys: ", Object.keys(place));
@@ -262,6 +289,12 @@ const PlaceView = () => {
             return;
           }
 
+          const foundReview = userResult.data[0].reviews.find(
+            (review: Review) => review.placeId === result.data[0]?.id
+          );
+
+          setPlaceReview(foundReview);
+
           // filter reviews
           const filteredReviews = userResult.data[0].reviews.filter(
             (review: Review) => review.placeId !== result.data[0]?.id
@@ -296,18 +329,17 @@ const PlaceView = () => {
   }, [id, getPlace]);
 
   useEffect(() => {
-    console.log("Rating: ", currentPlace?.rating);
-    if (!currentPlace?.rating) {
+    console.log("Rating: ", currentPlace?.avg_rating);
+    if (!currentPlace?.avg_rating) {
       setRatingColor("white");
-    } else if (Number(currentPlace?.rating) <= 3.0) {
+    } else if (Number(currentPlace?.avg_rating) <= 3.0) {
       setRatingColor("#FFC107");
-    } else if (Number(currentPlace?.rating) >= 7.0) {
+    } else if (Number(currentPlace?.avg_rating) >= 7.0) {
       setRatingColor("#4CAF50");
     } else {
       setRatingColor("#FFC107");
     }
-    console.log("Rating Color: ", ratingColor);
-  }, [currentPlace?.rating, ratingColor, setRatingColor]);
+  }, [currentPlace?.avg_rating, ratingColor, setRatingColor]);
 
   if (loading) {
     return (
@@ -372,29 +404,34 @@ const PlaceView = () => {
           </View>
           <View className="flex flex-row justify-evenly">
             <View className="flex flex-col justify-center items-center">
-              <Text className="text-lg font-medium">Rating</Text>
+              <Text className="text-md font-medium">Roamio Rating</Text>
               <View
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-3"
                 style={{ backgroundColor: ratingColor }}
               >
                 <Text className="text-white text-2xl font-JakartaBold">
-                  {currentPlace?.rating}
+                  {Math.round((currentPlace?.avg_rating ?? 0) * 10) / 10}
                 </Text>
               </View>
             </View>
             <View className="flex flex-col justify-center items-center">
-              <Text className="text-lg font-medium">Ranking</Text>
+              <Text className="text-md font-medium">Roamio Rating</Text>
+              <View
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-3"
+                style={{ backgroundColor: ratingColor }}
+              >
+                <Text className="text-white text-2xl font-JakartaBold">
+                  {placeReview
+                    ? Math.round(placeReview.rating * 10) / 10
+                    : "N/A"}
+                </Text>
+              </View>
+            </View>
+            <View className="flex flex-col justify-center items-center">
+              <Text className="text-md font-medium">Roamio Ranking</Text>
               <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 bg-gray-950/[.01]">
                 <Text className="text-black text-2xl font-JakartaBold">
                   # {currentPlace?.ranking}
-                </Text>
-              </View>
-            </View>
-            <View className="flex flex-col justify-center items-center">
-              <Text className="text-lg font-medium">Misc.</Text>
-              <View className="w-16 h-16 rounded-full flex items-center justify-center mx-3 border-gray-950/[.1] bg-gray-950/[.01]">
-                <Text className="text-black text-2xl font-JakartaBold">
-                  {currentPlace?.rating}
                 </Text>
               </View>
             </View>
