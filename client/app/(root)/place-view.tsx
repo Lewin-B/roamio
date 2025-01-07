@@ -1,7 +1,7 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { Heart, MapPin, Star, Share2 } from "lucide-react-native";
+import { Heart, MapPin, Star, Share2, CircleUser } from "lucide-react-native";
 import { useEffect, useState, useCallback } from "react";
 import React from "react";
 import {
@@ -387,11 +387,11 @@ const PlaceView = () => {
                 />
               </TouchableOpacity>
               <View className="flex-row gap-3">
-                <TouchableOpacity className="p-2 rounded-full bg-black/30 backdrop-blur">
-                  <Share2 size={24} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity className="p-2 rounded-full bg-black/30 backdrop-blur">
-                  <Heart size={24} color="white" />
+                <TouchableOpacity
+                  onPress={() => router.push("/(tabs)/profile")}
+                  className="p-2 rounded-full bg-black/30 backdrop-blur"
+                >
+                  <CircleUser size={24} color="white" />
                 </TouchableOpacity>
               </View>
             </View>
