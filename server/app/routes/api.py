@@ -11,11 +11,8 @@ rating_service = RatingService()
 @api_bp.route('/process-matches', methods=['POST'])
 async def process_matches():
     try:
-        print("Connected")
         data = await request.get_json()
         matches = data.get('matches', [])
-
-        print("Matches: ", matches)
         
         if not matches:
             return {'error': 'No matches provided'}, 400
