@@ -99,22 +99,22 @@ class RatingService:
                 """, text_review, user_id, place_id, place_name, normalized_rating, 
                     elo_rating, username)
 
-        async def update_rankings(self) -> None:
-            """Update rankings based on average ratings"""
-            pool = await NeonDB.get_pool()
-            async with pool.acquire() as conn:
-                await conn.execute("""
-                    WITH ranked AS (
-                        SELECT 
-                            id,
-                            ROW_NUMBER() OVER (ORDER BY avg_rating DESC) as new_rank
-                        FROM places
-                    )
-                    UPDATE places
-                    SET ranking = ranked.new_rank::text
-                    FROM ranked
-                    WHERE places.id = ranked.id
-                """)
+    async def update_rankings(self) -> None:
+        """Update rankings based on average ratings"""
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                WITH ranked AS (
+                    SELECT 
+                        id,
+                        ROW_NUMBER() OVER (ORDER BY avg_rating DESC) as new_rank
+                    FROM places
+                )
+                UPDATE places
+                SET ranking = ranked.new_rank::text
+                FROM ranked
+                WHERE places.id = ranked.id
+            """)
 
     async def process_matches(self, data: Dict[str, Any]) -> Dict[str, float]:
         """Process matches and create review"""
