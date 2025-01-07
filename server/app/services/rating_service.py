@@ -7,35 +7,46 @@ class RatingService:
     def __init__(self):
         self.elo_system = DynamicEloSystem()
 
-    async def get_place_elo_rating(self, place_id: int) -> float:
-        """Get current ELO rating for a place by ID"""
+    async def get_place_last_elo_rating(self, place_id: int) -> float:
+        """Get the last ELO rating for a place from reviews"""
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
             result = await conn.fetchval(
-                'SELECT elo_rating FROM places WHERE id = $1',
+                '''
+                SELECT elo_rating 
+                FROM reviews 
+                WHERE place_id = $1 
+                ORDER BY id DESC 
+                LIMIT 1
+                ''',
                 place_id
             )
             return float(result) if result else 1000.0
 
-    async def update_place(self, place_id: int, elo_rating: float) -> None:
-        """Update place with new ratings"""
-        normalized_rating = self.elo_system.normalize_rating(
-            elo_rating, 
-            min_rating=0, 
-            max_rating=2000,
-            scale=10
-        )
-        
+    async def update_place_avg_rating(self, place_id: int) -> None:
+        """Calculate and update average rating for a place"""
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
-            await conn.execute(
+            # Calculate average rating from all reviews
+            avg_rating = await conn.fetchval(
                 '''
-                UPDATE places 
-                SET rating = $1, elo_rating = $2 
-                WHERE id = $3
+                SELECT AVG(rating)
+                FROM reviews
+                WHERE place_id = $1
                 ''',
-                normalized_rating, elo_rating, place_id
+                place_id
             )
+            
+            # Update places table with new average
+            if avg_rating is not None:
+                await conn.execute(
+                    '''
+                    UPDATE places 
+                    SET avg_rating = $1 
+                    WHERE id = $2
+                    ''',
+                    float(avg_rating), place_id
+                )
 
     async def create_review(
         self, 
@@ -43,9 +54,9 @@ class RatingService:
         place_id: int, 
         text_review: str,
         elo_rating: float,
-        username: str = None  # Added username parameter
+        username: str = None
     ) -> None:
-        """Create a review entry"""
+        """Create a review entry with ratings"""
         normalized_rating = self.elo_system.normalize_rating(
             elo_rating, 
             min_rating=0, 
@@ -55,7 +66,7 @@ class RatingService:
         
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
-            # Get place name for the review
+            # Get place name
             place_name = await conn.fetchval(
                 'SELECT name FROM places WHERE id = $1',
                 place_id
@@ -68,25 +79,29 @@ class RatingService:
                     user_id
                 )
             
-            # Create review with all required fields
+            # Create review with ratings
             await conn.execute(
                 '''
                 INSERT INTO reviews 
                 (text_review, user_id, place_id, place_name, rating, elo_rating, username)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ''',
-                text_review, user_id, place_id, place_name, normalized_rating, elo_rating, username
+                text_review, user_id, place_id, place_name, normalized_rating, 
+                elo_rating, username
             )
+            
+            # Update the place's average rating
+            await self.update_place_avg_rating(place_id)
 
     async def update_rankings(self) -> None:
-        """Update rankings based on ELO ratings"""
+        """Update rankings based on average ratings"""
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
             await conn.execute("""
                 WITH ranked AS (
                     SELECT 
                         id,
-                        ROW_NUMBER() OVER (ORDER BY elo_rating DESC) as new_rank
+                        ROW_NUMBER() OVER (ORDER BY avg_rating DESC) as new_rank
                     FROM places
                 )
                 UPDATE places
@@ -101,9 +116,10 @@ class RatingService:
         user_id = data.get('user_id')
         place_id = data.get('place_id')
         text_review = data.get('text_review')
-        username = data.get('username')  # Optional username from request
+        username = data.get('username')
         
         updated_ratings = {}
+        affected_places = set()
         
         # First pass: collect current ratings
         for match in matches:
@@ -113,14 +129,36 @@ class RatingService:
             
             for pid in filter(None, [winner_id, loser_id] + tie_ids):
                 if pid not in updated_ratings:
-                    updated_ratings[pid] = await self.get_place_elo_rating(pid)
+                    updated_ratings[pid] = await self.get_place_last_elo_rating(pid)
+                affected_places.add(pid)
 
         # Second pass: process matches
         for match in matches:
             winner_id = match.get('winner')
             loser_id = match.get('loser')
             tie_ids = match.get('tie', [])
-            
+
+            # Special case: Handle single place rating
+            if len([x for x in [winner_id, loser_id] + tie_ids if x is not None]) == 1:
+                single_id = next(pid for pid in [winner_id, loser_id] if pid is not None)
+                current_rating = updated_ratings[single_id]
+                
+                if winner_id:
+                    vote_type = 'up'
+                elif loser_id:
+                    vote_type = 'down'
+                else:
+                    vote_type = 'neutral'
+                
+                new_rating = self.elo_system.update_single_rating(
+                    current_rating,
+                    vote_type,
+                    len(matches)
+                )
+                updated_ratings[single_id] = new_rating
+                continue
+
+            # Normal case: Process comparative ratings
             if tie_ids:
                 # Handle ties
                 for i in range(len(tie_ids)):
@@ -134,7 +172,6 @@ class RatingService:
                         updated_ratings[tie_ids[j]] = new_b
             
             elif winner_id and loser_id:
-                # Handle winner/loser
                 winner_rating = updated_ratings[winner_id]
                 loser_rating = updated_ratings[loser_id]
                 new_winner, new_loser = self.elo_system.compare(
@@ -142,23 +179,7 @@ class RatingService:
                 )
                 updated_ratings[winner_id] = new_winner
                 updated_ratings[loser_id] = new_loser
-            
-            elif winner_id and not loser_id:
-                # Handle single thumbs up against baseline
-                current_rating = updated_ratings[winner_id]
-                baseline_rating = 1000
-                new_rating, _ = self.elo_system.compare(
-                    current_rating, baseline_rating, 1, len(matches)
-                )
-                updated_ratings[winner_id] = new_rating
 
-        # Update all places with new ratings
-        update_tasks = [
-            self.update_place(pid, rating)
-            for pid, rating in updated_ratings.items()
-        ]
-        await asyncio.gather(*update_tasks)
-        
         # Create review if this is user's review
         if user_id and place_id and text_review:
             await self.create_review(
@@ -168,8 +189,35 @@ class RatingService:
                 elo_rating=updated_ratings.get(place_id, 1000),
                 username=username
             )
+        else:
+            # If no review but ratings changed, update affected places
+            for pid in affected_places:
+                await self.update_place_avg_rating(pid)
         
         # Update rankings
         await self.update_rankings()
         
-        return updated_ratings
+        # Return current place information
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            places = await conn.fetch("""
+                SELECT p.id, p.name, p.avg_rating, r.elo_rating, p.ranking
+                FROM places p
+                LEFT JOIN (
+                    SELECT place_id, elo_rating
+                    FROM reviews
+                    WHERE (place_id, id) IN (
+                        SELECT place_id, MAX(id)
+                        FROM reviews
+                        GROUP BY place_id
+                    )
+                ) r ON p.id = r.place_id
+                WHERE p.id = ANY($1::int[])
+            """, list(affected_places))
+            
+            return {place['id']: {
+                'name': place['name'],
+                'avg_rating': float(place['avg_rating']) if place['avg_rating'] else None,
+                'elo_rating': float(place['elo_rating']) if place['elo_rating'] else 1000,
+                'ranking': place['ranking']
+            } for place in places}
