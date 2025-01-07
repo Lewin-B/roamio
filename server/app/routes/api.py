@@ -9,7 +9,7 @@ api_bp = Blueprint('api', __name__)
 rating_service = RatingService()
 
 @api_bp.route('/process-matches', methods=['POST'])
-async def process_matches():  # Remove self and data parameters
+async def process_matches():
     try:
         data = await request.get_json()
         matches = data.get('matches', [])
@@ -25,27 +25,8 @@ async def process_matches():  # Remove self and data parameters
             return {'error': 'text_review is required when submitting a review'}, 400
 
         # Process matches and create review
-        updated_ratings = await rating_service.process_matches(data)
+        updated_places = await rating_service.process_matches(data)
         
-        # Get updated place details
-        pool = await NeonDB.get_pool()
-        async with pool.acquire() as conn:
-            places = await conn.fetch("""
-                SELECT id, name, rating, elo_rating, ranking 
-                FROM places 
-                WHERE id = ANY($1::int[])
-                """, 
-                list(updated_ratings.keys())
-            )
-            
-            updated_places = [{
-                'id': place['id'],
-                'name': place['name'],
-                'rating': float(place['rating']),
-                'elo_rating': float(place['elo_rating']),
-                'ranking': place['ranking']
-            } for place in places]
-
         return jsonify({
             'success': True,
             'updated_places': updated_places
