@@ -10,7 +10,6 @@ export async function GET(request: Request, { id }: { id: string }) {
     const response = await sql`
           SELECT 
             users.*,
-            'reviews', 
     json_agg(to_jsonb(reviews)) 
         AS reviews
             FROM 
