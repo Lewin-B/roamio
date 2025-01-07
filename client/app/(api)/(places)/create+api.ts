@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     if (!place_id || !location || !image) {
       return Response.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
