@@ -30,23 +30,22 @@ class RatingService:
             # Calculate average rating from all reviews
             avg_rating = await conn.fetchval(
                 '''
-                SELECT AVG(rating)
+                SELECT COALESCE(AVG(rating), 0)
                 FROM reviews
-                WHERE place_id = $1
+                WHERE place_id = $1 AND rating IS NOT NULL
                 ''',
                 place_id
             )
             
             # Update places table with new average
-            if avg_rating is not None:
-                await conn.execute(
-                    '''
-                    UPDATE places 
-                    SET avg_rating = $1 
-                    WHERE id = $2
-                    ''',
-                    float(avg_rating), place_id
-                )
+            await conn.execute(
+                '''
+                UPDATE places 
+                SET avg_rating = $1 
+                WHERE id = $2
+                ''',
+                float(avg_rating), place_id
+            )
 
     async def create_or_update_review(
         self, 
@@ -144,18 +143,21 @@ class RatingService:
             loser_id = match.get('loser')
             tie_ids = match.get('tie', [])
 
+            # In the process_matches method, modify the single place rating case:
             # Special case: Handle single place rating
             if len([x for x in [winner_id, loser_id] + tie_ids if x is not None]) == 1:
-                single_id = next(pid for pid in [winner_id, loser_id] if pid is not None)
-                current_rating = updated_ratings[single_id]
-                
-                if winner_id:
-                    vote_type = 'up'
-                elif loser_id:
-                    vote_type = 'down'
-                else:
+                # If it's a tie array with one element, that's the single place
+                if tie_ids:
+                    single_id = tie_ids[0]
                     vote_type = 'neutral'
+                else:
+                    single_id = next(pid for pid in [winner_id, loser_id] if pid is not None)
+                    if winner_id:
+                        vote_type = 'up'
+                    elif loser_id:
+                        vote_type = 'down'
                 
+                current_rating = updated_ratings[single_id]
                 new_rating = self.elo_system.update_single_rating(
                     current_rating,
                     vote_type,
@@ -186,7 +188,7 @@ class RatingService:
                 updated_ratings[winner_id] = new_winner
                 updated_ratings[loser_id] = new_loser
 
-        # In process_matches method, replace the create_review call with:
+        # In process_matches method, update the review handling section:
         if user_id and place_id:
             await self.create_or_update_review(
                 user_id=user_id,
@@ -194,11 +196,14 @@ class RatingService:
                 text_review=text_review,  # Can be None
                 elo_rating=updated_ratings.get(place_id, 1000),
                 username=username,
-                review_id=data.get('review_id')  # Will be None for new reviews
+                review_id=data.get('review_id')
             )
-        else:
-            # If no review but ratings changed, update affected places
-            for pid in affected_places:
+            # Always update the average rating after creating/updating a review
+            await self.update_place_avg_rating(place_id)
+
+        # Also update the affected places section
+        for pid in affected_places:
+            if pid != place_id:  # Don't update place_id twice
                 await self.update_place_avg_rating(pid)
         
         # Update rankings
