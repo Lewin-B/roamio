@@ -43,8 +43,9 @@ const FollowerModal = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms delay
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [followStatus, setFollowStatus] = useState<Record<number, boolean>>({});
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const [suggestions] = useState<User[]>([
     {
@@ -79,45 +80,55 @@ const FollowerModal = ({
     },
   ]);
 
+  // Initialize follow status for users
+  useEffect(() => {
+    const initializeFollowStatus = (users: User[]) => {
+      const newFollowStatus: Record<number, boolean> = {};
+      users.forEach((displayUser) => {
+        const followers: User[] = JSON.parse(displayUser.followers || "[]");
+        newFollowStatus[displayUser.id] = followers.some(
+          (follower) => follower.id === user?.id
+        );
+      });
+      setFollowStatus((prev) => ({ ...prev, ...newFollowStatus }));
+    };
+
+    initializeFollowStatus(suggestions);
+    if (searchResults.length > 0) {
+      initializeFollowStatus(searchResults);
+    }
+  }, [suggestions, searchResults, user?.id]);
+
   const handleFollow = async (follower: User) => {
+    // Optimistically update UI
+    setFollowStatus((prev) => ({ ...prev, [follower.id]: true }));
+
     try {
-      const followResult = await fetchAPI(
+      await fetchAPI(
         `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/follow/${follower.id}`,
         { method: "POST" }
       );
-
-      alert(`followed ${follower.username}`);
-      setSearchResults([]);
-      setSearchQuery("");
-      console.log(followResult);
     } catch (err) {
+      // Revert UI on error
+      setFollowStatus((prev) => ({ ...prev, [follower.id]: false }));
       alert("Unable to follow");
     }
   };
 
   const handleUnfollow = async (followee: User) => {
+    // Optimistically update UI
+    setFollowStatus((prev) => ({ ...prev, [followee.id]: false }));
+
     try {
-      const unfollowResult = await fetchAPI(
+      await fetchAPI(
         `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/unfollow/${followee.id}`,
         { method: "POST" }
       );
-
-      alert(`unfollowed ${followee.username}`);
-      setSearchResults([]);
-      setSearchQuery("");
-      console.log("Unfollow Result: ", unfollowResult);
     } catch (err) {
+      // Revert UI on error
+      setFollowStatus((prev) => ({ ...prev, [followee.id]: true }));
       alert("Unable to unfollow");
     }
-  };
-
-  const isFollowing = (newUser: User) => {
-    console.log("New followers: ", newUser.followers);
-    const followers: User[] = JSON.parse(newUser.followers || "[]");
-    console.log("User: ", user);
-
-    // Iterate through the followers and check for a matching ID
-    return followers.some((follower) => follower.id === user?.id);
   };
 
   const handleSearch = useCallback(async (query: string) => {
@@ -132,7 +143,6 @@ const FollowerModal = ({
         `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/search?username=${query}`
       );
       setSearchResults(searchResult || []);
-      console.log("Search Result: ", searchResult);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
@@ -141,7 +151,6 @@ const FollowerModal = ({
     }
   }, []);
 
-  // Effect to trigger search when debounced query changes
   useEffect(() => {
     handleSearch(debouncedSearchQuery);
   }, [debouncedSearchQuery, handleSearch]);
@@ -196,34 +205,38 @@ const FollowerModal = ({
                     {searchQuery ? "Search Results" : "Suggested Users"}
                   </Text>
                   {displayUsers.length > 0 ? (
-                    displayUsers.map((user) => (
+                    displayUsers.map((displayUser) => (
                       <TouchableOpacity
-                        key={user.id}
+                        key={displayUser.id}
                         className="flex-row items-center justify-between py-3"
                       >
                         <View className="flex-row items-center">
                           <Image
-                            source={{ uri: user.image }}
+                            source={{ uri: displayUser.image }}
                             className="w-10 h-10 rounded-full"
                           />
                           <View className="ml-3">
                             <Text className="text-gray-500">
-                              {user.username}
+                              {displayUser.username}
                             </Text>
                           </View>
                         </View>
                         <TouchableOpacity
                           onPress={() =>
-                            isFollowing(user)
-                              ? handleUnfollow(user)
-                              : handleFollow(user)
+                            followStatus[displayUser.id]
+                              ? handleUnfollow(displayUser)
+                              : handleFollow(displayUser)
                           }
                           className={`px-4 py-2 rounded-full ${
-                            isFollowing(user) ? "bg-green-600" : "bg-indigo-600"
+                            followStatus[displayUser.id]
+                              ? "bg-green-600"
+                              : "bg-indigo-600"
                           }`}
                         >
                           <Text className="text-white font-medium">
-                            {isFollowing(user) ? "Following" : "Follow"}
+                            {followStatus[displayUser.id]
+                              ? "Following"
+                              : "Follow"}
                           </Text>
                         </TouchableOpacity>
                       </TouchableOpacity>
