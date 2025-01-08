@@ -71,16 +71,6 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="itineraries"
-        options={{
-          title: "Itineraries",
-          headerShown: false,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.star} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

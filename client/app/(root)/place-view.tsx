@@ -1,7 +1,7 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { Heart, MapPin, Star, Share2, CircleUser } from "lucide-react-native";
+import { MapPin, Star, CircleUser } from "lucide-react-native";
 import { useEffect, useState, useCallback } from "react";
 import React from "react";
 import {
@@ -27,7 +27,7 @@ import { icons } from "@/constants";
 import { cn } from "@/lib/cn";
 import { fetchAPI } from "@/lib/fetch";
 
-interface NeonPlace {
+export interface NeonPlace {
   id: number;
   name: string;
   place_id: string;
@@ -41,7 +41,7 @@ interface NeonPlace {
   reviews: Review[];
 }
 
-interface Review {
+export interface Review {
   id: number;
   user_id: number;
   place_id: number;
@@ -52,7 +52,7 @@ interface Review {
   place_name: string;
 }
 
-interface User {
+export interface User {
   id: number;
   username: string;
   email: string;
@@ -72,7 +72,7 @@ const circles = [
   { color: "#F44336", description: "I didn't like it" }, // Bright red
 ];
 
-const ReviewCard = ({
+export const ReviewCard = ({
   image,
   username,
   text_review,
