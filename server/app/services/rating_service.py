@@ -80,13 +80,14 @@ class RatingService:
                 )
             
             if review_id:
-                # Update existing review
+                # Update existing review with updated_at timestamp
                 await conn.execute("""
                     UPDATE reviews 
                     SET text_review = COALESCE($1, text_review),
                         rating = $2,
                         elo_rating = $3,
-                        username = $4
+                        username = $4,
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = $5
                 """, text_review, normalized_rating, elo_rating, username, review_id)
             else:
@@ -213,10 +214,21 @@ class RatingService:
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
             places = await conn.fetch("""
-                SELECT p.id, p.name, p.avg_rating, r.elo_rating, p.ranking
+                SELECT 
+                    p.id, 
+                    p.name, 
+                    p.avg_rating, 
+                    r.elo_rating, 
+                    p.ranking,
+                    r.created_at,
+                    r.updated_at
                 FROM places p
                 LEFT JOIN (
-                    SELECT place_id, elo_rating
+                    SELECT 
+                        place_id, 
+                        elo_rating,
+                        created_at,
+                        updated_at
                     FROM reviews
                     WHERE (place_id, id) IN (
                         SELECT place_id, MAX(id)
@@ -226,10 +238,12 @@ class RatingService:
                 ) r ON p.id = r.place_id
                 WHERE p.id = ANY($1::int[])
             """, list(affected_places))
-            
+
             return {place['id']: {
                 'name': place['name'],
                 'avg_rating': float(place['avg_rating']) if place['avg_rating'] else None,
                 'elo_rating': float(place['elo_rating']) if place['elo_rating'] else 1000,
-                'ranking': place['ranking']
+                'ranking': place['ranking'],
+                'created_at': place['created_at'].isoformat() if place['created_at'] else None,
+                'updated_at': place['updated_at'].isoformat() if place['updated_at'] else None
             } for place in places}
