@@ -57,18 +57,21 @@ export const icons = {
 export const onboarding = [
   {
     id: 1,
-    title: "Roamio info 1",
-    description: "Whatever cool info we put here",
+    title: "Welcome to Roamio",
+    description:
+      "Discover a whole new way to rate and explore places! With Roamio, you compare locations based on your personal experiences, creating more meaningful and accurate ratings.",
   },
   {
     id: 2,
-    title: "Roam0 info 2",
-    description: "More cool info !!!",
+    title: "Rate by Comparison",
+    description:
+      "Forget arbitrary stars! Roamio lets you rate places by comparing them to places you've been before. Is that new pizza joint better than your favorite spot? Let the world know!",
   },
   {
     id: 3,
-    title: "Roamio info 3",
-    description: "Duke Dennis rizz baby gronk livvy dunne",
+    title: "Build Your Unique Travel Map",
+    description:
+      "Your comparisons create a personalized map of recommendations and insights. Share your favorites, discover hidden gems, and see the world through your own experiences.",
   },
 ];
 

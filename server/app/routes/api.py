@@ -127,6 +127,7 @@ async def get_followers(user_id):
 async def follow_user(follower_id, followee_id):
     """Follow a user"""
     try:
+        print(follower_id, followee_id)
         # Validate users exist and aren't the same
         if follower_id == followee_id:
             return {'error': 'Cannot follow yourself'}, 400
@@ -167,6 +168,7 @@ async def follow_user(follower_id, followee_id):
 async def unfollow_user(follower_id, followee_id):
     """Unfollow a user"""
     try:
+        print(follower_id, followee_id)
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
             result = await conn.execute("""

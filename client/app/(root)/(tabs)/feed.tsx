@@ -124,6 +124,7 @@ const Feed = () => {
     setLoading(true);
     try {
       const userResponse = await fetchAPI(`/(api)/(profile)/${clerkUser?.id}`);
+      console.log("user response: ", userResponse);
       if (userResponse?.data[0]) {
         setUser(userResponse.data[0]);
       }
@@ -214,7 +215,10 @@ const Feed = () => {
                 Follow some friends to see their latest reviews and
                 recommendations in your feed.
               </Text>
-              <TouchableOpacity className="mt-4 bg-indigo-600 py-3 rounded-lg">
+              <TouchableOpacity
+                onPress={() => setFollowVisible(true)}
+                className="mt-4 bg-indigo-600 py-3 rounded-lg"
+              >
                 <Text className="text-white text-center font-medium">
                   Find Friends to Follow
                 </Text>

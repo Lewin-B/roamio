@@ -79,22 +79,36 @@ const FollowerModal = ({
     },
   ]);
 
-  const handleFollow = async (followeeId: number) => {
-    const followResult = await fetchAPI(
-      `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/follow/${followeeId}`
-    );
+  const handleFollow = async (follower: User) => {
+    try {
+      const followResult = await fetchAPI(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/follow/${follower.id}`,
+        { method: "POST" }
+      );
 
-    if (!followResult) {
-      alert("Error following");
+      alert(`followed ${follower.username}`);
+      setSearchResults([]);
+      setSearchQuery("");
+      console.log(followResult);
+    } catch (err) {
+      alert("Unable to follow");
     }
-
-    console.log(followResult);
   };
 
-  const handleUnfollow = async (followerId: number) => {
-    const unfollowResult = await fetchAPI(
-      `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/follow/${followeeId}`
-    );
+  const handleUnfollow = async (followee: User) => {
+    try {
+      const unfollowResult = await fetchAPI(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/unfollow/${followee.id}`,
+        { method: "POST" }
+      );
+
+      alert(`unfollowed ${followee.username}`);
+      setSearchResults([]);
+      setSearchQuery("");
+      console.log("Unfollow Result: ", unfollowResult);
+    } catch (err) {
+      alert("Unable to unfollow");
+    }
   };
 
   const isFollowing = (newUser: User) => {
@@ -199,7 +213,11 @@ const FollowerModal = ({
                           </View>
                         </View>
                         <TouchableOpacity
-                          onPress={() => handleFollow(user.id)}
+                          onPress={() =>
+                            isFollowing(user)
+                              ? handleUnfollow(user)
+                              : handleFollow(user)
+                          }
                           className={`px-4 py-2 rounded-full ${
                             isFollowing(user) ? "bg-green-600" : "bg-indigo-600"
                           }`}
