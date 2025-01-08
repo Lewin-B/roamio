@@ -194,17 +194,48 @@ async def search_users():
         async with pool.acquire() as conn:
             # Using ILIKE for case-insensitive pattern matching
             users = await conn.fetch("""
-                SELECT * FROM users 
-                WHERE username ILIKE $1
-                ORDER BY username
-                LIMIT 20
+                SELECT 
+                    users.*,
+                    COALESCE(
+                        JSON_AGG(
+                            DISTINCT JSONB_BUILD_OBJECT('id', followers.id, 'username', followers.username)
+                        ) FILTER (WHERE followers.id IS NOT NULL), 
+                        '[]'
+                    ) AS followers,
+                    COALESCE(
+                        JSON_AGG(
+                            DISTINCT JSONB_BUILD_OBJECT('id', following.id, 'username', following.username)
+                        ) FILTER (WHERE following.id IS NOT NULL), 
+                        '[]'
+                    ) AS following
+                FROM 
+                    users
+                LEFT JOIN users AS followers ON followers.id = (
+                    SELECT follower 
+                    FROM followers 
+                    WHERE followers.followee = users.id
+                )
+                LEFT JOIN users AS following ON following.id = (
+                    SELECT followee 
+                    FROM followers
+                    WHERE followers.follower = users.id
+                )
+                WHERE 
+                    users.username ILIKE $1
+                GROUP BY 
+                    users.id
+                ORDER BY 
+                    users.username
+                LIMIT 20;
             """, f'%{search_term}%')
             
             return jsonify([{
                 'id': user['id'],
                 'username': user['username'],
                 'email': user['email'],
-                'clerk_id': user['clerk_id']
+                'clerk_id': user['clerk_id'],
+                'followers': user['followers'],
+                'following': user['following']
             } for user in users])
     except Exception as e:
         print(f"Error searching users: {str(e)}")

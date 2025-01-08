@@ -63,6 +63,9 @@ export interface User {
   email: string;
   clerk_id: string;
   reviews: Review[];
+  image: string;
+  followers: string;
+  following: string;
 }
 
 interface Match {

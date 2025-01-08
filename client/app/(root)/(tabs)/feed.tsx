@@ -89,7 +89,7 @@ const ReviewCard = ({
 
 const Feed = () => {
   const { user: clerkUser } = useUser();
-  const [user, setUser] = useState<User>();
+  const [user, setUser] = useState<User | undefined>();
   const [followingReviews, setFollowingReviews] = useState<Review[]>();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
@@ -124,7 +124,9 @@ const Feed = () => {
     setLoading(true);
     try {
       const userResponse = await fetchAPI(`/(api)/(profile)/${clerkUser?.id}`);
-      setUser(userResponse.data[0]);
+      if (userResponse?.data[0]) {
+        setUser(userResponse.data[0]);
+      }
       const processedReviews = processFollowingReviews(userResponse.data[0]);
       setFollowingReviews(processedReviews);
       console.log("Processed Reviews: ", processedReviews);
@@ -224,6 +226,7 @@ const Feed = () => {
       <FollowerModal
         visible={followVisible}
         onClose={() => setFollowVisible(false)}
+        user={user}
       />
     </SafeAreaView>
   );
