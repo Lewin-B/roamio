@@ -1,12 +1,12 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import {
-  MapPin,
-  Star,
   CircleUser,
   MessageCircle,
   Heart,
+  UserPlus,
 } from "lucide-react-native";
+import { Undo2 } from "lucide-react-native";
 import { useState, useCallback, useEffect } from "react";
 import { ActivityIndicator } from "react-native";
 import {
@@ -14,17 +14,14 @@ import {
   View,
   Image,
   TouchableOpacity,
-  ImageBackground,
   ScrollView,
-  Modal,
-  TextInput,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Review, User } from "../place-view";
 
-import { cn } from "@/lib/cn";
+import FollowerModal from "@/components/follow-view";
 import { fetchAPI } from "@/lib/fetch";
 
 const ReviewCard = ({
@@ -32,6 +29,11 @@ const ReviewCard = ({
   username,
   text_review,
   timestamp = "2h ago", // Added timestamp for better context
+}: {
+  image: string;
+  username: string;
+  text_review: string;
+  timestamp: string;
 }) => {
   const [liked, setLiked] = useState(false);
 
@@ -92,6 +94,7 @@ const Feed = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [followVisible, setFollowVisible] = useState<boolean>(false);
 
   const processFollowingReviews = (userData: any) => {
     if (!userData?.following) return [];
@@ -163,15 +166,22 @@ const Feed = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
       <View className="px-4 py-3 flex-row items-center justify-between bg-white border-b border-gray-200">
         <Text className="text-2xl font-bold text-gray-900">Your Feed</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/profile")}
-          className="w-10 h-10 items-center justify-center rounded-full bg-gray-100"
-        >
-          <CircleUser size={24} color="#4b5563" />
-        </TouchableOpacity>
+        <View className="flex-row space-x-3">
+          <TouchableOpacity
+            onPress={() => setFollowVisible(true)}
+            className="w-10 h-10 items-center justify-center rounded-full bg-gray-100"
+          >
+            <UserPlus size={24} color="#4b5563" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/profile")}
+            className="w-10 h-10 items-center justify-center rounded-full bg-gray-100"
+          >
+            <CircleUser size={24} color="#4b5563" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -211,6 +221,10 @@ const Feed = () => {
           )}
         </View>
       </ScrollView>
+      <FollowerModal
+        visible={followVisible}
+        onClose={() => setFollowVisible(false)}
+      />
     </SafeAreaView>
   );
 };

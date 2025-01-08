@@ -1,7 +1,13 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { MapPin, Star, CircleUser } from "lucide-react-native";
+import {
+  MapPin,
+  Star,
+  CircleUser,
+  Heart,
+  MessageCircle,
+} from "lucide-react-native";
 import { useEffect, useState, useCallback } from "react";
 import React from "react";
 import {
@@ -24,7 +30,6 @@ import type { Place } from "@/components/Map";
 import CustomButton from "@/components/CustomButton";
 import { fetchPhotoUrl } from "@/components/Map";
 import { icons } from "@/constants";
-import { cn } from "@/lib/cn";
 import { fetchAPI } from "@/lib/fetch";
 
 export interface NeonPlace {
@@ -72,43 +77,66 @@ const circles = [
   { color: "#F44336", description: "I didn't like it" }, // Bright red
 ];
 
-export const ReviewCard = ({
+const ReviewCard = ({
   image,
   username,
   text_review,
+  timestamp = "2h ago", // Added timestamp for better context
 }: {
   image: string;
   username: string;
   text_review: string;
+  timestamp: string;
 }) => {
+  const [liked, setLiked] = useState(false);
+
   return (
-    <TouchableOpacity
-      className={cn(
-        "relative w-64 cursor-pointer overflow-hidden rounded-xl border p-4 mx-2",
-        // light styles
-        "border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]",
-        // dark styles
-        "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]"
-      )}
-    >
-      <View className="flex flex-row items-center gap-2">
-        <Image
-          className="rounded-full"
-          style={{ width: 32, height: 32 }}
-          source={{ uri: image }}
-          alt=""
-        />
-        <View className="flex flex-col">
-          <Text className="text-sm font-medium dark:text-white">
-            {username}
-          </Text>
-          <Text className="text-xs font-medium dark:text-white/40">
-            {username}
-          </Text>
+    <View className="bg-white mb-4 rounded-xl shadow-sm">
+      {/* User Header */}
+      <View className="p-4 flex-row items-center justify-between border-b border-gray-100">
+        <View className="flex-row items-center gap-3">
+          <Image
+            className="w-10 h-10 rounded-full"
+            source={{ uri: image || "https://via.placeholder.com/40" }}
+          />
+          <View>
+            <Text className="font-semibold text-gray-900">{username}</Text>
+            <Text className="text-xs text-gray-500">{timestamp}</Text>
+          </View>
+        </View>
+        <TouchableOpacity>
+          <View className="w-8 h-8 items-center justify-center rounded-full bg-gray-50">
+            <Text className="text-gray-600">•••</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Review Content */}
+      <View className="p-4">
+        <Text className="text-gray-700 leading-relaxed">{text_review}</Text>
+      </View>
+
+      {/* Action Buttons */}
+      <View className="flex-row items-center justify-between px-4 py-3 border-t border-gray-100">
+        <View className="flex-row gap-6">
+          <TouchableOpacity
+            onPress={() => setLiked(!liked)}
+            className="flex-row items-center gap-2"
+          >
+            <Heart
+              size={20}
+              color={liked ? "#ef4444" : "#6b7280"}
+              fill={liked ? "#ef4444" : "none"}
+            />
+            <Text className="text-sm text-gray-600">Like</Text>
+          </TouchableOpacity>
+          <TouchableOpacity className="flex-row items-center gap-2">
+            <MessageCircle size={20} color="#6b7280" />
+            <Text className="text-sm text-gray-600">Comment</Text>
+          </TouchableOpacity>
         </View>
       </View>
-      <Text className="mt-2 text-sm">{text_review}</Text>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -159,8 +187,8 @@ const PlaceView = () => {
     } else {
       setLeftBound(mid + 1);
       match = {
-        winner: -1,
-        loser: -1,
+        winner: null,
+        loser: null,
         tie: [teamOne, teamTwo],
       };
     }

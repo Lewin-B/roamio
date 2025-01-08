@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "uber",
-    "slug": "uber",
+    "name": "roamio",
+    "slug": "roamio",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
