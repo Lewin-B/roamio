@@ -82,18 +82,57 @@ const circles = [
   { color: "#F44336", description: "I didn't like it" }, // Bright red
 ];
 
+const relativeTime = (dateString: string) => {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffInSeconds = Math.floor((now - past) / 1000);
+
+  // Less than a minute
+  if (diffInSeconds < 60) {
+    return "just now";
+  }
+
+  // Less than an hour
+  if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes}m ago`;
+  }
+
+  // Less than a day
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours}h ago`;
+  }
+
+  // Less than a week
+  if (diffInSeconds < 604800) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days}d ago`;
+  }
+
+  // Less than a month
+  if (diffInSeconds < 2592000) {
+    const weeks = Math.floor(diffInSeconds / 604800);
+    return `${weeks}w ago`;
+  }
+
+  // Format as date if older
+  return past.toLocaleDateString();
+};
+
 const ReviewCard = ({
   image,
   username,
   text_review,
-  timestamp = "2h ago", // Added timestamp for better context
+  updated_at,
 }: {
   image: string;
   username: string;
   text_review: string;
-  timestamp: string;
+  updated_at: string;
 }) => {
   const [liked, setLiked] = useState(false);
+  const timestamp = relativeTime(updated_at);
 
   return (
     <View className="bg-white mb-4 rounded-xl shadow-sm">
@@ -119,27 +158,6 @@ const ReviewCard = ({
       {/* Review Content */}
       <View className="p-4">
         <Text className="text-gray-700 leading-relaxed">{text_review}</Text>
-      </View>
-
-      {/* Action Buttons */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-t border-gray-100">
-        <View className="flex-row gap-6">
-          <TouchableOpacity
-            onPress={() => setLiked(!liked)}
-            className="flex-row items-center gap-2"
-          >
-            <Heart
-              size={20}
-              color={liked ? "#ef4444" : "#6b7280"}
-              fill={liked ? "#ef4444" : "none"}
-            />
-            <Text className="text-sm text-gray-600">Like</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center gap-2">
-            <MessageCircle size={20} color="#6b7280" />
-            <Text className="text-sm text-gray-600">Comment</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </View>
   );
