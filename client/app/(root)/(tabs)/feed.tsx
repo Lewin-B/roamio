@@ -1,12 +1,7 @@
 import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
-import {
-  CircleUser,
-  MessageCircle,
-  Heart,
-  UserPlus,
-} from "lucide-react-native";
-import { Undo2 } from "lucide-react-native";
+import { CircleUser, UserPlus } from "lucide-react-native";
+import { MapPin } from "lucide-react-native";
 import { useState, useCallback, useEffect } from "react";
 import { ActivityIndicator } from "react-native";
 import {
@@ -24,64 +19,91 @@ import { Review, User } from "../place-view";
 import FollowerModal from "@/components/follow-view";
 import { fetchAPI } from "@/lib/fetch";
 
+const relativeTime = (dateString: string) => {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffInSeconds = Math.floor((now - past) / 1000);
+
+  // Less than a minute
+  if (diffInSeconds < 60) {
+    return "just now";
+  }
+
+  // Less than an hour
+  if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes}m ago`;
+  }
+
+  // Less than a day
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours}h ago`;
+  }
+
+  // Less than a week
+  if (diffInSeconds < 604800) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days}d ago`;
+  }
+
+  // Less than a month
+  if (diffInSeconds < 2592000) {
+    const weeks = Math.floor(diffInSeconds / 604800);
+    return `${weeks}w ago`;
+  }
+
+  // Format as date if older
+  return past.toLocaleDateString();
+};
+
 const ReviewCard = ({
   image,
   username,
   text_review,
-  timestamp = "2h ago", // Added timestamp for better context
+  timestamp,
+  place_name,
 }: {
   image: string;
   username: string;
   text_review: string;
   timestamp: string;
+  place_name: string;
 }) => {
   const [liked, setLiked] = useState(false);
 
+  const time = relativeTime(timestamp);
+
   return (
-    <View className="bg-white mb-4 rounded-xl shadow-sm">
+    <View className="bg-white mb-4 rounded-xl shadow-sm overflow-hidden">
       {/* User Header */}
-      <View className="p-4 flex-row items-center justify-between border-b border-gray-100">
+      <View className="p-4 flex-row items-center justify-between">
         <View className="flex-row items-center gap-3">
           <Image
-            className="w-10 h-10 rounded-full"
+            className="w-11 h-11 rounded-full border border-gray-100"
             source={{ uri: image || "https://via.placeholder.com/40" }}
           />
-          <View>
-            <Text className="font-semibold text-gray-900">{username}</Text>
-            <Text className="text-xs text-gray-500">{timestamp}</Text>
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text className="font-semibold text-gray-900">{username}</Text>
+              <Text className="text-xs text-gray-400">•</Text>
+              <Text className="text-xs text-gray-400">{time}</Text>
+            </View>
+            <View className="flex-row items-center gap-1 px-2 py-1 bg-gray-50 rounded-md self-start mt-1">
+              <MapPin size={14} color="#6b7280" />
+              <Text className="text-gray-600 text-sm font-medium">
+                {place_name}
+              </Text>
+            </View>
           </View>
         </View>
-        <TouchableOpacity>
-          <View className="w-8 h-8 items-center justify-center rounded-full bg-gray-50">
-            <Text className="text-gray-600">•••</Text>
-          </View>
-        </TouchableOpacity>
       </View>
 
       {/* Review Content */}
-      <View className="p-4">
-        <Text className="text-gray-700 leading-relaxed">{text_review}</Text>
-      </View>
-
-      {/* Action Buttons */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-t border-gray-100">
-        <View className="flex-row gap-6">
-          <TouchableOpacity
-            onPress={() => setLiked(!liked)}
-            className="flex-row items-center gap-2"
-          >
-            <Heart
-              size={20}
-              color={liked ? "#ef4444" : "#6b7280"}
-              fill={liked ? "#ef4444" : "none"}
-            />
-            <Text className="text-sm text-gray-600">Like</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center gap-2">
-            <MessageCircle size={20} color="#6b7280" />
-            <Text className="text-sm text-gray-600">Comment</Text>
-          </TouchableOpacity>
-        </View>
+      <View className="px-4 pb-4">
+        <Text className="text-gray-700 leading-relaxed text-base">
+          {text_review}
+        </Text>
       </View>
     </View>
   );
@@ -114,6 +136,12 @@ const Feed = () => {
           });
         });
       }
+    });
+
+    allReviews.sort((a, b) => {
+      const dateA = new Date(a.updated_at).getTime();
+      const dateB = new Date(b.updated_at).getTime();
+      return dateB - dateA;
     });
 
     console.log("All user: ", allReviews);
@@ -201,6 +229,8 @@ const Feed = () => {
                 image={review.image}
                 username={review.username}
                 text_review={review.text_review}
+                place_name={review.place_name}
+                timestamp={review.updated_at}
               />
             ))
           ) : (

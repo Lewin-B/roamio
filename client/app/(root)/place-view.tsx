@@ -55,6 +55,8 @@ export interface Review {
   rating: number;
   image: string;
   place_name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface User {
