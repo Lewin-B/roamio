@@ -1,11 +1,17 @@
-import React from "react";
 import { useUser } from "@clerk/clerk-expo";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React from "react";
 import { View, ScrollView, Text, Image, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useFetch } from "@/lib/fetch";
 
 const Profile = () => {
   // Access user info from Clerk
   const { user } = useUser();
+
+  const { data: userResult } = useFetch(`/(api)/(profile)/${user?.id}`);
+
+  console.log("Result: ", userResult);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -48,7 +54,9 @@ const Profile = () => {
         {/* Example: Settings or Action Buttons */}
         <View className="mt-6 mb-5">
           <TouchableOpacity className="py-3 px-4 bg-gray-100 rounded-lg mb-3">
-            <Text className="text-gray-700 font-JakartaMedium">Edit Profile</Text>
+            <Text className="text-gray-700 font-JakartaMedium">
+              Edit Profile
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity className="py-3 px-4 bg-gray-100 rounded-lg">
