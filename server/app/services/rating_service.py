@@ -52,9 +52,10 @@ class RatingService:
         user_id: int, 
         place_id: int, 
         elo_rating: float,
+        image: str,
         text_review: str = None,
         username: str = None,
-        review_id: int = None
+        review_id: int = None,
     ) -> None:
         """Create or update a review entry"""
         normalized_rating = self.elo_system.normalize_rating(
@@ -87,17 +88,18 @@ class RatingService:
                         rating = $2,
                         elo_rating = $3,
                         username = $4,
-                        updated_at = CURRENT_TIMESTAMP
+                        updated_at = CURRENT_TIMESTAMP,
+                        image = $6
                     WHERE id = $5
-                """, text_review, normalized_rating, elo_rating, username, review_id)
+                """, text_review, normalized_rating, elo_rating, username, review_id, image)
             else:
                 # Create new review
                 await conn.execute("""
                     INSERT INTO reviews 
-                    (text_review, user_id, place_id, place_name, rating, elo_rating, username)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    (text_review, user_id, place_id, place_name, rating, elo_rating, username, image)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """, text_review, user_id, place_id, place_name, normalized_rating, 
-                    elo_rating, username)
+                    elo_rating, username, image)
 
     async def update_rankings(self) -> None:
         """Update rankings based on average ratings"""
@@ -123,6 +125,7 @@ class RatingService:
         place_id = data.get('place_id')
         text_review = data.get('text_review')
         username = data.get('username')
+        image = data.get('image')
         
         updated_ratings = {}
         affected_places = set()
@@ -197,7 +200,8 @@ class RatingService:
                 text_review=text_review,  # Can be None
                 elo_rating=updated_ratings.get(place_id, 1000),
                 username=username,
-                review_id=data.get('review_id')
+                review_id=data.get('review_id'),
+                image=image
             )
             # Always update the average rating after creating/updating a review
             await self.update_place_avg_rating(place_id)

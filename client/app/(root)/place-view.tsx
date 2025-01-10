@@ -65,7 +65,7 @@ export interface User {
   email: string;
   clerk_id: string;
   reviews: Review[];
-  image_uri: string;
+  image_url: string;
   followers: string;
   following: string;
 }
@@ -240,6 +240,8 @@ const PlaceView = () => {
       return;
     }
 
+    console.log;
+
     const apiInfo = {
       user_id: fullUser?.id,
       place_id: currentPlace?.id,
@@ -247,6 +249,7 @@ const PlaceView = () => {
       text_review: text,
       username: fullUser?.username,
       review_id: placeReview ? placeReview.id : null,
+      image: fullUser?.image_url,
     };
 
     console.log("Api Info: ", apiInfo);

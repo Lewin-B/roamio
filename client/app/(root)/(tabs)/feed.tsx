@@ -125,12 +125,13 @@ const Feed = () => {
 
     userData.following.forEach((followedUser: any) => {
       if (followedUser.reviews) {
+        console.log("Followed User Reviews: ", followedUser.reviews);
         followedUser.reviews.forEach((review: Review) => {
           allReviews.push({
             ...review,
-            image: "",
-            username: followedUser.username, // Add username to identify reviewer
-            user_id: followedUser.id, // Add userId to identify reviewer
+            image: review.image,
+            username: followedUser.username,
+            user_id: followedUser.id,
           });
         });
       }
@@ -150,7 +151,7 @@ const Feed = () => {
     setLoading(true);
     try {
       const userResponse = await fetchAPI(`/(api)/(profile)/${clerkUser?.id}`);
-      console.log("user response: ", userResponse);
+      console.log("user response: ", userResponse.data[0].following);
       if (userResponse?.data[0]) {
         setUser(userResponse.data[0]);
       }
