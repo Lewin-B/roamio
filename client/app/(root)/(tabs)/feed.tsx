@@ -70,8 +70,6 @@ const ReviewCard = ({
   timestamp: string;
   place_name: string;
 }) => {
-  const [liked, setLiked] = useState(false);
-
   const time = relativeTime(timestamp);
 
   return (
@@ -205,12 +203,6 @@ const Feed = () => {
             className="w-10 h-10 items-center justify-center rounded-full bg-gray-100"
           >
             <UserPlus size={24} color="#4b5563" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/profile")}
-            className="w-10 h-10 items-center justify-center rounded-full bg-gray-100"
-          >
-            <CircleUser size={24} color="#4b5563" />
           </TouchableOpacity>
         </View>
       </View>

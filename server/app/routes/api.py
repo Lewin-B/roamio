@@ -127,7 +127,6 @@ async def get_followers(user_id):
 async def follow_user(follower_id, followee_id):
     """Follow a user"""
     try:
-        print(follower_id, followee_id)
         # Validate users exist and aren't the same
         if follower_id == followee_id:
             return {'error': 'Cannot follow yourself'}, 400

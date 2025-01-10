@@ -1,4 +1,5 @@
 import { useSignUp } from "@clerk/clerk-expo";
+import { useUser, useSession } from "@clerk/clerk-expo";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
@@ -13,6 +14,7 @@ import { fetchAPI } from "@/lib/fetch";
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { user } = useUser();
 
   const [form, setForm] = useState({
     name: "",
@@ -50,6 +52,7 @@ const SignUp = () => {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: verification.code,
       });
+
       if (completeSignUp.status === "complete") {
         await fetchAPI("/(api)/user", {
           method: "POST",
@@ -57,6 +60,7 @@ const SignUp = () => {
             name: form.name,
             email: form.email,
             clerkId: completeSignUp.createdUserId,
+            image_url: user?.imageUrl,
           }),
         });
         await setActive({ session: completeSignUp.createdSessionId });
@@ -184,7 +188,7 @@ const SignUp = () => {
               title="Browse Home"
               onPress={() => {
                 setShowSuccessModal(false);
-                router.push(`/(root)/(tabs)/home`);
+                router.push("/(root)/prepare");
               }}
               className="mt-5"
             />

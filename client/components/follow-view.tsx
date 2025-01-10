@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import SearchBar from "react-native-dynamic-search-bar";
 
 import type { User } from "@/app/(root)/place-view";
 
+import { useFetch } from "@/lib/fetch";
 import { fetchAPI } from "@/lib/fetch";
 
 // Custom debounce hook
@@ -47,48 +49,29 @@ const FollowerModal = ({
   const [followStatus, setFollowStatus] = useState<Record<number, boolean>>({});
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const [suggestions] = useState<User[]>([
-    {
-      id: 1,
-      username: "@johndoe",
-      clerk_id: "asdlkfja;lskdfj",
-      email: "",
-      reviews: [],
-      image: "",
-      followers: "",
-      following: "",
-    },
-    {
-      id: 2,
-      username: "@janesmith",
-      clerk_id: "alsdfj;asldfj;a",
-      email: "a",
-      reviews: [],
-      image: "",
-      followers: "",
-      following: "",
-    },
-    {
-      id: 3,
-      clerk_id: "asdfk;ja",
-      username: "@mikej",
-      email: "",
-      reviews: [],
-      image: "",
-      followers: "",
-      following: "",
-    },
-  ]);
+  const { data: suggestions, loading: suggestionsLoading } =
+    useFetch<User[]>("/(api)/users");
 
-  // Initialize follow status for users
+  // Initialize follow status whenever users list changes
   useEffect(() => {
-    const initializeFollowStatus = (users: User[]) => {
+    const initializeFollowStatus = (users: User[] | undefined) => {
+      if (!users) return;
+
       const newFollowStatus: Record<number, boolean> = {};
       users.forEach((displayUser) => {
-        const followers: User[] = JSON.parse(displayUser.followers || "[]");
-        newFollowStatus[displayUser.id] = followers.some(
-          (follower) => follower.id === user?.id
-        );
+        try {
+          const followers: User[] =
+            typeof displayUser.followers === "string"
+              ? JSON.parse(displayUser.followers)
+              : displayUser.followers || [];
+
+          newFollowStatus[displayUser.id] = followers.some(
+            (follower) => follower.id === user?.id
+          );
+        } catch (err) {
+          console.error("Error parsing followers:", err);
+          newFollowStatus[displayUser.id] = false;
+        }
       });
       setFollowStatus((prev) => ({ ...prev, ...newFollowStatus }));
     };
@@ -100,12 +83,14 @@ const FollowerModal = ({
   }, [suggestions, searchResults, user?.id]);
 
   const handleFollow = async (follower: User) => {
+    if (!user?.id) return;
+
     // Optimistically update UI
     setFollowStatus((prev) => ({ ...prev, [follower.id]: true }));
 
     try {
       await fetchAPI(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/follow/${follower.id}`,
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user.id}/follow/${follower.id}`,
         { method: "POST" }
       );
     } catch (err) {
@@ -116,12 +101,14 @@ const FollowerModal = ({
   };
 
   const handleUnfollow = async (followee: User) => {
+    if (!user?.id) return;
+
     // Optimistically update UI
     setFollowStatus((prev) => ({ ...prev, [followee.id]: false }));
 
     try {
       await fetchAPI(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user?.id}/unfollow/${followee.id}`,
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/users/${user.id}/unfollow/${followee.id}`,
         { method: "POST" }
       );
     } catch (err) {
@@ -193,10 +180,11 @@ const FollowerModal = ({
 
           <ScrollView className="flex-1">
             <View className="p-4 border-t border-gray-100">
-              {loading ? (
+              {loading || suggestionsLoading ? (
                 <View className="py-4">
-                  <Text className="text-gray-500 text-center">
-                    Searching...
+                  <ActivityIndicator size="large" color="#6b7280" />
+                  <Text className="text-gray-500 text-center mt-2">
+                    {loading ? "Searching..." : "Loading suggestions..."}
                   </Text>
                 </View>
               ) : (
@@ -204,7 +192,7 @@ const FollowerModal = ({
                   <Text className="text-lg font-semibold text-gray-900 mb-2">
                     {searchQuery ? "Search Results" : "Suggested Users"}
                   </Text>
-                  {displayUsers.length > 0 ? (
+                  {displayUsers?.length > 0 ? (
                     displayUsers.map((displayUser) => (
                       <TouchableOpacity
                         key={displayUser.id}
@@ -212,8 +200,13 @@ const FollowerModal = ({
                       >
                         <View className="flex-row items-center">
                           <Image
-                            source={{ uri: displayUser.image }}
-                            className="w-10 h-10 rounded-full"
+                            source={{
+                              uri:
+                                displayUser.image_url ||
+                                displayUser.image_uri ||
+                                "https://via.placeholder.com/40",
+                            }}
+                            className="w-10 h-10 rounded-full bg-gray-100"
                           />
                           <View className="ml-3">
                             <Text className="text-gray-500">

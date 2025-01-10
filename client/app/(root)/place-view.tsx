@@ -65,7 +65,7 @@ export interface User {
   email: string;
   clerk_id: string;
   reviews: Review[];
-  image: string;
+  image_uri: string;
   followers: string;
   following: string;
 }
@@ -131,7 +131,6 @@ const ReviewCard = ({
   text_review: string;
   updated_at: string;
 }) => {
-  const [liked, setLiked] = useState(false);
   const timestamp = relativeTime(updated_at);
 
   return (
