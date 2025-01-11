@@ -123,39 +123,34 @@ const relativeTime = (dateString: string) => {
 const ReviewCard = ({
   image,
   username,
-  text_review,
   updated_at,
+  text_review,
 }: {
   image: string;
   username: string;
   text_review: string;
   updated_at: string;
 }) => {
-  const timestamp = relativeTime(updated_at);
-
   return (
-    <View className="bg-white mb-4 rounded-xl shadow-sm">
+    <View className="bg-white mb-5 rounded-xl shadow-sm">
       {/* User Header */}
-      <View className="p-4 flex-row items-center justify-between border-b border-gray-100">
+      <View className="p-5 flex-row items-center justify-between border-b border-gray-100">
         <View className="flex-row items-center gap-3">
           <Image
-            className="w-10 h-10 rounded-full"
-            source={{ uri: image || "https://via.placeholder.com/40" }}
+            className="w-11 h-11 rounded-full"
+            source={{ uri: image || "https://via.placeholder.com/44" }}
           />
-          <View>
+          <View className="w-3/4">
             <Text className="font-semibold text-gray-900">{username}</Text>
-            <Text className="text-xs text-gray-500">{timestamp}</Text>
+            <Text className="text-xs text-gray-500">
+              {relativeTime(updated_at)}
+            </Text>
           </View>
         </View>
-        <TouchableOpacity>
-          <View className="w-8 h-8 items-center justify-center rounded-full bg-gray-50">
-            <Text className="text-gray-600">•••</Text>
-          </View>
-        </TouchableOpacity>
       </View>
 
       {/* Review Content */}
-      <View className="p-4">
+      <View className="p-5">
         <Text className="text-gray-700 leading-relaxed">{text_review}</Text>
       </View>
     </View>

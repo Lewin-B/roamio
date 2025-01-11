@@ -36,7 +36,6 @@ const Profile = () => {
   const followingCount = userResult?.[0]?.following?.length ?? 0;
 
   const onRefresh = useCallback(async () => {
-    console.log("user result: ", userResult[0].following.length);
     setRefreshing(true);
     try {
       setRefreshKey((prev) => prev + 1);
@@ -53,16 +52,19 @@ const Profile = () => {
     image_url?: string;
   }) => {
     try {
-      const response = await fetch(`/(api)/(profile)/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clerk_id: user?.id,
-          ...updates,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/(profile)/update`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clerk_id: user?.id,
+            ...updates,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to update profile");

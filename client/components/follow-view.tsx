@@ -49,8 +49,9 @@ const FollowerModal = ({
   const [followStatus, setFollowStatus] = useState<Record<number, boolean>>({});
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const { data: suggestions, loading: suggestionsLoading } =
-    useFetch<User[]>("/(api)/users");
+  const { data: suggestions, loading: suggestionsLoading } = useFetch<User[]>(
+    `${process.env.EXPO_PUBLIC_BACKEND_URL}/users`
+  );
 
   // Initialize follow status whenever users list changes
   useEffect(() => {
@@ -151,7 +152,7 @@ const FollowerModal = ({
     setSearchResults([]);
   };
 
-  const displayUsers = searchQuery ? searchResults : suggestions;
+  const displayUsers = searchQuery ? searchResults : suggestions?.slice(0, 3);
 
   return (
     <Modal

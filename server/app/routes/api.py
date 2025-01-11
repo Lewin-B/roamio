@@ -39,8 +39,8 @@ async def get_random_users():
         users = await conn.fetch("""
             SELECT *
             FROM users
-            ORDER BY RANDOM()
-            LIMIT 3
+            LIMIT 3                   
+            ORDER BY RANDOM() 
         """)
         
         return jsonify([{

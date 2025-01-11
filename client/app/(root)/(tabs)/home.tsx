@@ -3,6 +3,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import {
   Text,
   View,
@@ -19,6 +20,7 @@ import CustomButton from "@/components/CustomButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
 import Map from "@/components/Map";
 import { icons } from "@/constants";
+import { fetchAPI } from "@/lib/fetch";
 import { useFetch } from "@/lib/fetch";
 
 const Home = () => {
@@ -29,22 +31,6 @@ const Home = () => {
     signOut();
     router.replace("/(auth)/sign-in");
   };
-
-  const { data, error } = useFetch(
-    `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/update`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        clerk_id: user?.id,
-        username: user?.username,
-        bio: "",
-        image_url: user?.imageUrl,
-      }),
-    }
-  );
 
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [latitude, setLatitude] = useState<number>();
@@ -61,6 +47,22 @@ const Home = () => {
       }
 
       let location = await Location.getCurrentPositionAsync({});
+
+      const result = fetchAPI(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/update`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clerk_id: user?.id,
+            username: user?.username,
+            bio: "",
+            image_url: user?.imageUrl,
+          }),
+        }
+      );
 
       setLatitude(location.coords?.latitude);
       setLongitude(location.coords?.longitude);
