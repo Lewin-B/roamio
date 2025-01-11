@@ -44,7 +44,7 @@ async def get_random_users():
         
         return jsonify([{
             'id': user['id'],
-            'name': user['name'],
+            'username': user['username'],
             'email': user['email'],
             'clerkId': user['clerk_id'],
             'imageUrl': user['image_url']

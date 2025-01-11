@@ -17,7 +17,7 @@ class UserService:
             return User.from_db(row)
 
     @staticmethod
-    async def create_user(username: str, email: str, clerk_id: str, image_ur: str) -> int:
+    async def create_user(username: str, email: str, clerk_id: str, image_url: str) -> int:
         pool = await NeonDB.get_pool()
         async with pool.acquire() as conn:
             user_id = await conn.fetchval(
@@ -26,7 +26,7 @@ class UserService:
                 VALUES ($1, $2, $3, $4, NOW())
                 RETURNING id
                 ''',
-                username, email
+                username, email, clerk_id, image_url
             )
             return user_id
 
