@@ -240,8 +240,6 @@ const PlaceView = () => {
       return;
     }
 
-    console.log;
-
     const apiInfo = {
       user_id: fullUser?.id,
       place_id: currentPlace?.id,
@@ -289,7 +287,11 @@ const PlaceView = () => {
       setLoading(true);
       try {
         console.log("user: ", user);
-        const result = await fetchAPI(`/(api)/(places)/${id}`);
+        const result = await fetchAPI(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL}/places/${id}`
+        );
+
+        console.log("Result: ", result.data);
         if (result.data.length === 0) {
           // Fetch detailed place info from Google API
           const url = `https://maps.googleapis.com/maps/api/place/details/json?placeid=${id}&key=${process.env.EXPO_PUBLIC_PLACES_API_KEY ?? ""}`;
@@ -306,25 +308,33 @@ const PlaceView = () => {
           console.log("Place Keys: ", Object.keys(place));
 
           // Insert the place into the database
-          const insertResult = await fetchAPI("/(api)/(places)/create", {
-            method: "POST",
-            body: JSON.stringify({
-              place_id: id,
-              location: `${place.geometry.location.lat},${place.geometry.location.lng}`,
-              image: place.photos?.[0]?.photo_reference
-                ? fetchPhotoUrl(place.photos[0].photo_reference)
-                : undefined,
-              name: place.name,
-              website: place.website,
-              formatted_address: place.formatted_address,
-              types: place.types.join(" · "),
-            }),
-          });
+          const insertResult = await fetchAPI(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/places/create`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                place_id: id,
+                location: `${place.geometry.location.lat},${place.geometry.location.lng}`,
+                image: place.photos?.[0]?.photo_reference
+                  ? fetchPhotoUrl(place.photos[0].photo_reference)
+                  : undefined,
+                name: place.name,
+                website: place.website,
+                formatted_address: place.formatted_address,
+                types: place.types.join(" · "),
+              }),
+            }
+          );
 
           console.log("Inserted place into the database: ", insertResult);
           setCurrentPlace(insertResult.data);
 
-          const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
+          const userResult = await fetchAPI(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/${user?.id}`
+          );
 
           if (!userResult) {
             setError(true);
@@ -341,7 +351,9 @@ const PlaceView = () => {
           console.log("Place found in database: ", result.data);
           setCurrentPlace(result.data[0]);
 
-          const userResult = await fetchAPI(`/(api)/(profile)/${user?.id}`);
+          const userResult = await fetchAPI(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/${user?.id}`
+          );
 
           if (!userResult) {
             setError(true);

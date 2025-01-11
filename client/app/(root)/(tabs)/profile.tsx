@@ -21,8 +21,8 @@ const Profile = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: userResult, mutate } = useFetch(
-    `/(api)/(profile)/${user?.id}?refresh=${refreshKey}`
+  const { data: userResult } = useFetch(
+    `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/${user?.id}?refresh=${refreshKey}`
   );
 
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -36,6 +36,7 @@ const Profile = () => {
   const followingCount = userResult?.[0]?.following?.length ?? 0;
 
   const onRefresh = useCallback(async () => {
+    console.log("user result: ", userResult[0].following.length);
     setRefreshing(true);
     try {
       setRefreshKey((prev) => prev + 1);

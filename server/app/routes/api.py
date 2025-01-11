@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Any, Dict
 from quart import Blueprint, request, jsonify
 from app.services.user_service import UserService
@@ -369,8 +370,17 @@ async def get_profile(clerk_id):
                 )
                 SELECT * FROM user_connections
             """, clerk_id)
+
+            # Deserialize the JSON string fields into Python lists
+            data = []
+            for row in result:
+                row_dict = dict(row)
+                row_dict['reviews'] = json.loads(row_dict['reviews'])
+                row_dict['followers'] = json.loads(row_dict['followers'])
+                row_dict['following'] = json.loads(row_dict['following'])
+                data.append(row_dict)
             
-            return jsonify({'data': [dict(row) for row in result]})
+            return jsonify({'data': data})
     except Exception as e:
         print(f"Error getting profile: {str(e)}")
         return {'error': 'Internal Server Error'}, 500
@@ -415,7 +425,6 @@ async def create_place():
         print(f"Error creating place: {str(e)}")
         return {'error': 'Internal Server Error'}, 500
 
-# Place Get Route
 @api_bp.route('/places/<place_id>', methods=['GET'])
 async def get_place(place_id):
     try:
@@ -424,14 +433,25 @@ async def get_place(place_id):
             result = await conn.fetch("""
                 SELECT 
                     places.*,
-                    json_agg(to_jsonb(reviews)) AS reviews
+                    COALESCE(
+                        json_agg(reviews) FILTER (WHERE reviews.id IS NOT NULL), 
+                        '[]'
+                    ) AS reviews
                 FROM places
                 LEFT JOIN reviews ON places.id = reviews.place_id
                 WHERE places.place_id = $1
                 GROUP BY places.id
             """, place_id)
             
-            return jsonify({'data': [dict(row) for row in result]})
+            # Convert each row to a dictionary and ensure 'reviews' is parsed into an array
+            data = []
+            for row in result:
+                row_dict = dict(row)
+                # Parse 'reviews' field from string to list
+                row_dict['reviews'] = json.loads(row_dict['reviews'])
+                data.append(row_dict)
+            
+            return jsonify({'data': data})
     except Exception as e:
         print(f"Error getting place: {str(e)}")
         return {'error': 'Internal Server Error'}, 500

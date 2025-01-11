@@ -9,18 +9,21 @@ const PrepareUser = () => {
   const { user } = useUser();
   const router = useRouter();
 
-  const { data, error } = useFetch(`/(api)/(profile)/update`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      clerk_id: user?.id,
-      username: user?.username,
-      bio: "",
-      image_url: user?.imageUrl,
-    }),
-  });
+  const { data, error } = useFetch(
+    `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/update`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clerk_id: user?.id,
+        username: user?.username,
+        bio: "",
+        image_url: user?.imageUrl,
+      }),
+    }
+  );
 
   // Navigate to home when data is received
   if (data) {

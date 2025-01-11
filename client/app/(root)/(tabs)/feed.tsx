@@ -150,7 +150,9 @@ const Feed = () => {
   const getUser = useCallback(async () => {
     setLoading(true);
     try {
-      const userResponse = await fetchAPI(`/(api)/(profile)/${clerkUser?.id}`);
+      const userResponse = await fetchAPI(
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/${clerkUser?.id}`
+      );
       console.log("user response: ", userResponse.data[0].following);
       if (userResponse?.data[0]) {
         setUser(userResponse.data[0]);
