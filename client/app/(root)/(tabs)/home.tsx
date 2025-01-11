@@ -19,6 +19,7 @@ import CustomButton from "@/components/CustomButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
 import Map from "@/components/Map";
 import { icons } from "@/constants";
+import { useFetch } from "@/lib/fetch";
 
 const Home = () => {
   const { user } = useUser();
@@ -28,6 +29,22 @@ const Home = () => {
     signOut();
     router.replace("/(auth)/sign-in");
   };
+
+  const { data, error } = useFetch(
+    `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/update`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clerk_id: user?.id,
+        username: user?.username,
+        bio: "",
+        image_url: user?.imageUrl,
+      }),
+    }
+  );
 
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [latitude, setLatitude] = useState<number>();

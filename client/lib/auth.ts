@@ -32,7 +32,7 @@ export const tokenCache = {
 export const googleOAuth = async (startOAuthFlow: any) => {
   try {
     const { createdSessionId, setActive, signUp } = await startOAuthFlow({
-      redirectUrl: Linking.createURL("/(root)/prepare"),
+      redirectUrl: Linking.createURL("/(root)/(tabs)/home"),
     });
 
     if (createdSessionId) {
@@ -53,7 +53,7 @@ export const googleOAuth = async (startOAuthFlow: any) => {
           });
         }
 
-        router.push("/(root)/prepare");
+        router.push("/(root)/(tabs)/home");
 
         return {
           success: true,

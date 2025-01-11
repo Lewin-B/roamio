@@ -66,6 +66,7 @@ const SignUp = () => {
             image_url: user?.imageUrl,
           }),
         });
+
         await setActive({ session: completeSignUp.createdSessionId });
         setVerification({
           ...verification,
@@ -191,7 +192,7 @@ const SignUp = () => {
               title="Browse Home"
               onPress={() => {
                 setShowSuccessModal(false);
-                router.push("/(root)/prepare");
+                router.push("/(root)/(tabs)/home");
               }}
               className="mt-5"
             />
