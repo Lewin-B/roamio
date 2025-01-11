@@ -8,6 +8,49 @@ from app.services.rating_service import RatingService
 api_bp = Blueprint('api', __name__)
 rating_service = RatingService()
 
+@api_bp.route('/user', methods=['POST'])
+async def create_user():
+    try:
+        data = await request.get_json()
+        print("data: ", data)
+        
+        required_fields = ['name', 'email', 'clerkId', 'image_url']
+        if not all(field in data for field in required_fields):
+            return {'error': 'Missing required fields'}, 400
+
+        user_id = await UserService.create_user(
+            username=data['name'],
+            email=data['email'],
+            clerk_id=data['clerkId'],
+            image_url=data['image_url']
+        )
+        
+        return {'data': {'id': user_id}}, 201
+
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        return {'error': 'Internal Server Error'}, 500
+
+@api_bp.route('/random_user', methods=['GET'])
+async def get_random_users():
+    pool = await NeonDB.get_pool()
+    async with pool.acquire() as conn:
+        users = await conn.fetch("""
+            SELECT *
+            FROM users
+            ORDER BY RANDOM()
+            LIMIT 3
+        """)
+        
+        return jsonify([{
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email'],
+            'clerkId': user['clerk_id'],
+            'imageUrl': user['image_url']
+            # Add any other fields from your users table
+        } for user in users])
+
 @api_bp.route('/process-matches', methods=['POST'])
 async def process_matches():
     try:
@@ -66,14 +109,14 @@ async def get_users():
     users = await UserService.get_all_users()
     return jsonify([user.__dict__ for user in users])
 
-@api_bp.route('/users', methods=['POST'])
+"""@api_bp.route('/users', methods=['POST'])
 async def create_user():
     data = await request.get_json()
     user_id = await UserService.create_user(
         data['username'],
         data['email']
     )
-    return {'id': user_id}, 201
+    return {'id': user_id}, 201"""
 
 @api_bp.route('/users/<int:user_id>/followees', methods=['GET'])
 async def get_followees(user_id):

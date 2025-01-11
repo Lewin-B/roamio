@@ -54,7 +54,8 @@ const SignUp = () => {
       });
 
       if (completeSignUp.status === "complete") {
-        await fetchAPI("/(api)/user", {
+        console.log("Check: ", process.env.EXPO_PUBLIC_BACKEND_URL);
+        await fetchAPI(`${process.env.EXPO_PUBLIC_BACKEND_URL}/user`, {
           method: "POST",
           body: JSON.stringify({
             name: form.name,
