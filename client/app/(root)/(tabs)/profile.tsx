@@ -53,7 +53,7 @@ const Profile = () => {
   }) => {
     try {
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/(profile)/update`,
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/profile/update`,
         {
           method: "PUT",
           headers: {
