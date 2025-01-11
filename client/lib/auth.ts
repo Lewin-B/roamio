@@ -1,4 +1,5 @@
 import * as Linking from "expo-linking";
+import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 import { fetchAPI } from "@/lib/fetch";
@@ -31,7 +32,7 @@ export const tokenCache = {
 export const googleOAuth = async (startOAuthFlow: any) => {
   try {
     const { createdSessionId, setActive, signUp } = await startOAuthFlow({
-      redirectUrl: Linking.createURL("/(root)/(tabs)/home"),
+      redirectUrl: Linking.createURL("/(root)/prepare"),
     });
 
     if (createdSessionId) {
@@ -41,6 +42,9 @@ export const googleOAuth = async (startOAuthFlow: any) => {
         if (signUp.createdUserId) {
           await fetchAPI(`${process.env.EXPO_PUBLIC_BACKEND_URL}/user`, {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify({
               name: `${signUp.firstName} ${signUp.lastName}`,
               email: signUp.emailAddress,
@@ -48,6 +52,8 @@ export const googleOAuth = async (startOAuthFlow: any) => {
             }),
           });
         }
+
+        router.push("/(root)/prepare");
 
         return {
           success: true,
