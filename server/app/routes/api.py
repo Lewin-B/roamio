@@ -14,7 +14,7 @@ async def create_user():
         data = await request.get_json()
         print("data: ", data)
         
-        required_fields = ['name', 'email', 'clerkId', 'image_url']
+        required_fields = ['name', 'email', 'clerkId']
         if not all(field in data for field in required_fields):
             return {'error': 'Missing required fields'}, 400
 
@@ -22,7 +22,7 @@ async def create_user():
             username=data['name'],
             email=data['email'],
             clerk_id=data['clerkId'],
-            image_url=data['image_url']
+            image_url=data.get('image_url', None)
         )
         
         return {'data': {'id': user_id}}, 201
