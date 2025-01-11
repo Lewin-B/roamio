@@ -241,3 +241,154 @@ async def search_users():
     except Exception as e:
         print(f"Error searching users: {str(e)}")
         return {'error': 'Failed to search users'}, 500
+    
+# Profile Update Route
+@api_bp.route('/profile/update', methods=['PUT'])
+async def update_profile():
+    try:
+        data = await request.get_json()
+        clerk_id = data.get('clerk_id')
+        username = data.get('username')
+        bio = data.get('bio')
+        image_url = data.get('image_url')
+
+        if not clerk_id:
+            return {'error': 'Missing clerk_id'}, 400
+
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            user = await conn.fetchrow("""
+                UPDATE users 
+                SET 
+                    username = COALESCE($1, username),
+                    bio = COALESCE($2, bio),
+                    image_url = COALESCE($3, image_url)
+                WHERE clerk_id = $4
+                RETURNING *
+            """, username, bio, image_url, clerk_id)
+
+            return jsonify({'data': dict(user)})
+    except Exception as e:
+        print(f"Error updating user: {str(e)}")
+        return {'error': 'Internal Server Error'}, 500
+
+# Profile Get Route
+@api_bp.route('/profile/<clerk_id>', methods=['GET'])
+async def get_profile(clerk_id):
+    try:
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.fetch("""
+                WITH user_connections AS (
+                    SELECT 
+                        users.*,
+                        COALESCE(json_agg(DISTINCT reviews) FILTER (WHERE reviews.id IS NOT NULL), '[]') AS reviews,
+                        COALESCE(
+                            json_agg(
+                                DISTINCT jsonb_build_object(
+                                    'id', follower_users.id,
+                                    'username', follower_users.username,
+                                    'email', follower_users.email,
+                                    'image_url', follower_users.image_url,
+                                    'reviews', (
+                                        SELECT COALESCE(json_agg(r), '[]')
+                                        FROM reviews r
+                                        WHERE r.user_id = follower_users.id
+                                    )
+                                )
+                            ) FILTER (WHERE follower_users.id IS NOT NULL), 
+                            '[]'
+                        ) AS followers,
+                        COALESCE(
+                            json_agg(
+                                DISTINCT jsonb_build_object(
+                                    'id', following_users.id,
+                                    'username', following_users.username,
+                                    'email', following_users.email,
+                                    'image_url', following_users.image_url,
+                                    'reviews', (
+                                        SELECT COALESCE(json_agg(r), '[]')
+                                        FROM reviews r
+                                        WHERE r.user_id = following_users.id
+                                    )
+                                )
+                            ) FILTER (WHERE following_users.id IS NOT NULL), 
+                            '[]'
+                        ) AS following
+                    FROM users
+                    LEFT JOIN reviews ON users.id = reviews.user_id
+                    LEFT JOIN followers AS followers_rel ON users.id = followers_rel.followee
+                    LEFT JOIN users AS follower_users ON followers_rel.follower = follower_users.id
+                    LEFT JOIN followers AS following_rel ON users.id = following_rel.follower
+                    LEFT JOIN users AS following_users ON following_rel.followee = following_users.id
+                    WHERE users.clerk_id = $1
+                    GROUP BY users.id
+                )
+                SELECT * FROM user_connections
+            """, clerk_id)
+            
+            return jsonify({'data': [dict(row) for row in result]})
+    except Exception as e:
+        print(f"Error getting profile: {str(e)}")
+        return {'error': 'Internal Server Error'}, 500
+
+# Place Create Route
+@api_bp.route('/places/create', methods=['POST'])
+async def create_place():
+    try:
+        data = await request.get_json()
+        required_fields = ['place_id', 'location', 'image']
+        
+        if not all(data.get(field) for field in required_fields):
+            return {'error': 'Missing required fields'}, 400
+
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            place = await conn.fetchrow("""
+                INSERT INTO places (
+                    place_id,
+                    avg_rating,
+                    location,
+                    image,
+                    name,
+                    website,
+                    formatted_address,
+                    types
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING *
+            """, 
+            data.get('place_id'),
+            data.get('rating', 0),
+            data.get('location'),
+            data.get('image'),
+            data.get('name', ''),
+            data.get('website', ''),
+            data.get('formatted_address', ''),
+            data.get('types', '')
+            )
+
+            return jsonify({'data': dict(place)}), 201
+    except Exception as e:
+        print(f"Error creating place: {str(e)}")
+        return {'error': 'Internal Server Error'}, 500
+
+# Place Get Route
+@api_bp.route('/places/<place_id>', methods=['GET'])
+async def get_place(place_id):
+    try:
+        pool = await NeonDB.get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.fetch("""
+                SELECT 
+                    places.*,
+                    json_agg(to_jsonb(reviews)) AS reviews
+                FROM places
+                LEFT JOIN reviews ON places.id = reviews.place_id
+                WHERE places.place_id = $1
+                GROUP BY places.id
+            """, place_id)
+            
+            return jsonify({'data': [dict(row) for row in result]})
+    except Exception as e:
+        print(f"Error getting place: {str(e)}")
+        return {'error': 'Internal Server Error'}, 500
